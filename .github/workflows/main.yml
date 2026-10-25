@@ -3,9 +3,8 @@ name: ETL Supermercados Andinos
 on:
   push:
     paths:
-      - 'data/bronce/ventas.csv'   # solo se activa si cambia este archivo
-      - 'data/bronce/**'           # o cualquier archivo de bronce
-  workflow_dispatch:               # también se puede ejecutar manualmente
+      - 'data/bronce/**'
+  workflow_dispatch:
 
 jobs:
   ejecutar-etl:
@@ -23,12 +22,46 @@ jobs:
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          pip install pandas openpyxl
+          pip install pandas openpyxl Office365-REST-Python-Client
 
       - name: Ejecutar pipeline
         run: python main.py
 
-      - name: Subir resultados (capa oro)
+      - name: Subir Excel a SharePoint
+        env:
+          SHAREPOINT_URL: ${{ secrets.SHAREPOINT_URL }}
+          SHAREPOINT_USERNAME: ${{ secrets.SHAREPOINT_USERNAME }}
+          SHAREPOINT_PASSWORD: ${{ secrets.SHAREPOINT_PASSWORD }}
+        run: |
+          python - << 'EOF'
+          from office365.runtime.auth.user_credential import UserCredential
+          from office365.sharepoint.client_context import ClientContext
+          import os
+
+          site_url = os.environ["SHAREPOINT_URL"]
+          username = os.environ["SHAREPOINT_USERNAME"]
+          password = os.environ["SHAREPOINT_PASSWORD"]
+
+          ctx = ClientContext(site_url).with_credentials(
+              UserCredential(username, password)
+          )
+
+          # Ruta del archivo local generado por el pipeline
+          local_path = "data/oro/modelo_estrella.xlsx"
+
+          # Carpeta destino en SharePoint (Documentos compartidos)
+          target_folder = ctx.web.get_folder_by_server_relative_url(
+              "/sites/xd123/Documentos compartidos"
+          )
+
+          with open(local_path, "rb") as f:
+              file_content = f.read()
+
+          target_folder.upload_file("modelo_estrella.xlsx", file_content).execute_query()
+          print("Archivo subido correctamente a SharePoint")
+          EOF
+
+      - name: Subir resultados como artefacto
         uses: actions/upload-artifact@v4
         with:
           name: modelo-estrella
