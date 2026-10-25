@@ -5,7 +5,6 @@ on:
   push:
     paths:
       - 'data/bronce/**'
-<<<<<<< HEAD
       - 'andinos_etl/**'
       - 'main.py'
       - 'requirements.txt'
@@ -25,9 +24,7 @@ permissions:
 concurrency:
   group: andinos-etl-${{ github.ref }}
   cancel-in-progress: false
-=======
   workflow_dispatch:
->>>>>>> 2f5cd83b2c5e8cecd831fec99c63955306f30c76
 
 jobs:
   test:
@@ -43,7 +40,6 @@ jobs:
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-<<<<<<< HEAD
           pip install -r requirements.txt
       - name: Comprobaciones estáticas
         run: python -m compileall -q andinos_etl main.py tests
@@ -201,7 +197,6 @@ jobs:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
         run: python -m andinos_etl.sharepoint andinos-model-approved
-=======
           pip install pandas openpyxl Office365-REST-Python-Client
 
       - name: Ejecutar pipeline
@@ -263,4 +258,3 @@ jobs:
             data/oro/
             data/calidad/
           if-no-files-found: warn
->>>>>>> 2f5cd83b2c5e8cecd831fec99c63955306f30c76
