@@ -131,6 +131,8 @@ def test_oro_approved_crea_bundle_exacto(tmp_path: Path) -> None:
     assert resultado.manifest["margen"] == 15.0
     assert resultado.manifest["git_commit"]
     assert resultado.manifest["created_at_utc"].endswith("Z")
+    contenido_fact = (resultado.output_dir / "modelo_estrella" / "fact_ventas.csv").read_text(encoding="utf-8-sig")
+    assert "T" in contenido_fact.splitlines()[1].split(",")[1]
     assert {ruta.relative_to(bundle).as_posix() for ruta in bundle.rglob("*") if ruta.is_file()} == esperados
     assert verificar_artifact(bundle).ok
 

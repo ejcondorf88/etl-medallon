@@ -77,11 +77,23 @@ def test_excel_guarda_fecha_hora_como_datetime(tmp_path: Path) -> None:
     resultado = oro.ejecutar(_plata_completa())
 
     ruta = settings.gold_dir / "modelo_estrella.xlsx"
-    libro = load_workbook(ruta, read_only=True)
-    celda = libro["fact_ventas"]["B2"]
+    libro = load_workbook(ruta, read_only=False)
+    hoja = libro["fact_ventas"]
+    celda = hoja["B2"]
     assert isinstance(celda.value, datetime)
-    assert celda.number_format != "General"
+    assert celda.number_format == "YYYY-MM-DD HH:MM:SS"
+    assert hoja.column_dimensions["B"].width >= 19
     assert "fecha_hora" in resultado["fact_ventas"].columns
+
+
+def test_csv_oro_usa_fecha_hora_iso_para_power_bi(tmp_path: Path) -> None:
+    settings = Settings(data_dir=tmp_path, output_dir=tmp_path / "salida")
+    oro = CapaOro(settings, AlmacenCsv())
+
+    oro.ejecutar(_plata_completa())
+
+    contenido = (settings.gold_dir / "fact_ventas.csv").read_text(encoding="utf-8-sig")
+    assert "2025-02-23T17:33:00" in contenido
 
 
 def test_calendario_no_tiene_huecos(tmp_path: Path) -> None:
