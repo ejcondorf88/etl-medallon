@@ -240,7 +240,7 @@ def ejecutar_oro(bronze_dir: Path, plata_dir: Path, output_dir: Path) -> StageRe
         modelo.mkdir(parents=True)
         calidad.mkdir(parents=True)
         for nombre, df in datos_oro.items():
-            df.to_csv(modelo / f"{nombre}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+            df.to_csv(modelo / f"{nombre}.csv", index=False, encoding="utf-8-sig", date_format="%Y-%m-%dT%H:%M:%S", lineterminator="\n")
         shutil.copy2(staging_gold / "modelo_estrella.xlsx", bundle / "modelo_estrella.xlsx")
         shutil.copy2(staging_quality / "reporte_calidad.csv", calidad / "reporte_calidad.csv")
         shutil.copy2(plata_dir / "reglas_limpieza.csv", calidad / "reglas_limpieza.csv")

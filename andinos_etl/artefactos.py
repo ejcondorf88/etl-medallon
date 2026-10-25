@@ -45,8 +45,8 @@ def escribir_plata(destino: Path, resultados: Mapping[str, ResultadoLimpieza]) -
         rechazado = destino / "rechazados" / f"{tabla}_rechazados.csv"
         limpio.parent.mkdir(parents=True, exist_ok=True)
         rechazado.parent.mkdir(parents=True, exist_ok=True)
-        resultado.limpio.to_csv(limpio, index=False, encoding="utf-8-sig", date_format="%Y-%m-%d %H:%M:%S", lineterminator="\n")
-        resultado.rechazado.to_csv(rechazado, index=False, encoding="utf-8-sig", date_format="%Y-%m-%d %H:%M:%S", lineterminator="\n")
+        resultado.limpio.to_csv(limpio, index=False, encoding="utf-8-sig", date_format="%Y-%m-%dT%H:%M:%S", lineterminator="\n")
+        resultado.rechazado.to_csv(rechazado, index=False, encoding="utf-8-sig", date_format="%Y-%m-%dT%H:%M:%S", lineterminator="\n")
         tablas[tabla] = {
             "limpio": limpio.relative_to(destino).as_posix(),
             "rechazados": rechazado.relative_to(destino).as_posix(),

@@ -22,4 +22,4 @@ class AlmacenCsv:
         """Escribe un CSV creando las carpetas necesarias. Fechas en formato ISO."""
         ruta.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(ruta, index=False, encoding=self.ENCODING_ESCRITURA,
-                  date_format="%Y-%m-%d %H:%M:%S", lineterminator="\n")
+                  date_format="%Y-%m-%dT%H:%M:%S", lineterminator="\n")

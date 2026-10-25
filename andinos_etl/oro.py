@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pandas as pd
+from openpyxl.utils import get_column_letter
 
 from .base import CapaMedallon
 from .config import CLAVE_DESCONOCIDA, DIAS_SEMANA, MESES, MESES_LARGOS
@@ -41,6 +42,14 @@ class CapaOro(CapaMedallon):
                         if len(muestra) > 0 and hasattr(muestra.iloc[0], "year"):
                             df_export[col] = df_export[col].astype(str)
                 df_export.to_excel(writer, sheet_name=nombre, index=False)
+                hoja = writer.sheets[nombre]
+                for indice, columna in enumerate(df_export.columns, start=1):
+                    if not pd.api.types.is_datetime64_any_dtype(df_export[columna]):
+                        continue
+                    letra = get_column_letter(indice)
+                    hoja.column_dimensions[letra].width = 20
+                    for fila in range(2, len(df_export) + 2):
+                        hoja.cell(row=fila, column=indice).number_format = "YYYY-MM-DD HH:MM:SS"
         self.log.info("Oro    | modelo_estrella.xlsx | %d pestañas generadas", len(oro))
 
         return oro
