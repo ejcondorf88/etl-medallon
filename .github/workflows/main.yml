@@ -1,3 +1,4 @@
+
 name: ETL Supermercados Andinos
 
 on:
@@ -30,26 +31,35 @@ jobs:
       - name: Subir Excel a SharePoint
         env:
           SHAREPOINT_URL: ${{ secrets.SHAREPOINT_URL }}
+          SHAREPOINT_TENANT_ID: ${{ secrets.SHAREPOINT_TENANT_ID }}
+          SHAREPOINT_CLIENT_ID: ${{ secrets.SHAREPOINT_CLIENT_ID }}
           SHAREPOINT_USERNAME: ${{ secrets.SHAREPOINT_USERNAME }}
           SHAREPOINT_PASSWORD: ${{ secrets.SHAREPOINT_PASSWORD }}
         run: |
           python - << 'EOF'
-          from office365.runtime.auth.user_credential import UserCredential
-          from office365.sharepoint.client_context import ClientContext
           import os
+          from office365.sharepoint.client_context import ClientContext
 
           site_url = os.environ["SHAREPOINT_URL"]
+          tenant_id = os.environ["SHAREPOINT_TENANT_ID"]
+          client_id = os.environ["SHAREPOINT_CLIENT_ID"]
           username = os.environ["SHAREPOINT_USERNAME"]
           password = os.environ["SHAREPOINT_PASSWORD"]
 
-          ctx = ClientContext(site_url).with_credentials(
-              UserCredential(username, password)
+          ctx = ClientContext(site_url).with_username_and_password(
+              tenant_id,
+              client_id,
+              username,
+              password
           )
 
-          # Ruta del archivo local generado por el pipeline
           local_path = "data/oro/modelo_estrella.xlsx"
 
-          # Carpeta destino en SharePoint (Documentos compartidos)
+          if not os.path.isfile(local_path):
+              raise FileNotFoundError(
+                  f"No se encontró el archivo: {local_path}"
+              )
+
           target_folder = ctx.web.get_folder_by_server_relative_url(
               "/sites/xd123/Documentos compartidos"
           )
@@ -57,14 +67,20 @@ jobs:
           with open(local_path, "rb") as f:
               file_content = f.read()
 
-          target_folder.upload_file("modelo_estrella.xlsx", file_content).execute_query()
+          target_folder.upload_file(
+              "modelo_estrella.xlsx",
+              file_content
+          ).execute_query()
+
           print("Archivo subido correctamente a SharePoint")
           EOF
 
       - name: Subir resultados como artefacto
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: modelo-estrella
           path: |
             data/oro/
             data/calidad/
+          if-no-files-found: warn
