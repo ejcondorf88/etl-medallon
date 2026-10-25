@@ -36,9 +36,7 @@ class CapaOro(CapaMedallon):
             for nombre, df in oro.items():
                 df_export = df.copy()
                 for col in df_export.columns:
-                    if pd.api.types.is_datetime64_any_dtype(df_export[col]):
-                        df_export[col] = df_export[col].dt.strftime("%Y-%m-%d %H:%M:%S")
-                    elif df_export[col].dtype == object and len(df_export) > 0:
+                    if df_export[col].dtype == object and len(df_export) > 0:
                         muestra = df_export[col].dropna()
                         if len(muestra) > 0 and hasattr(muestra.iloc[0], "year"):
                             df_export[col] = df_export[col].astype(str)
@@ -118,9 +116,11 @@ class CapaOro(CapaMedallon):
                 raise ErrorIntegridad(f"{huerfanos} ventas con {natural} que no existe en su dimensión")
 
         for natural, llave in (("cliente_id", "cliente_key"), ("promocion_id", "promocion_key")):
-            tardios = f[natural].notna() & f[llave].isna()
-            if tardios.any():
-                self.log.warning("%d ventas con %s sin dimensión; se asignan a 'desconocido'", tardios.sum(), natural)
+            huerfanos = f[natural].notna() & f[llave].isna()
+            if huerfanos.any():
+                raise ErrorIntegridad(
+                    f"{int(huerfanos.sum())} ventas con {natural} que no existe en su dimensión"
+                )
             f[llave] = f[llave].fillna(CLAVE_DESCONOCIDA).astype(int)
 
         f["importe_bruto"] = f["cantidad"] * f["precio_unitario"]
@@ -132,9 +132,9 @@ class CapaOro(CapaMedallon):
         f["tiene_promocion"] = (f["promocion_key"] != CLAVE_DESCONOCIDA).astype(int)
         f["costo_imputado"] = f["costo_imputado"].astype(int)
         f["fecha_key"] = f["fecha_hora"].dt.strftime("%Y%m%d").astype(int)
+        f["hora"] = f["fecha_hora"].dt.hour.astype(int)
 
-        # fecha_hora eliminada: basta con fecha_key
-        columnas = ["venta_id", "fecha_key", "tienda_key", "producto_key", "cliente_key",
+        columnas = ["venta_id", "fecha_hora", "hora", "fecha_key", "tienda_key", "producto_key", "cliente_key",
                     "promocion_key", "cantidad", "precio_unitario", "descuento_pct", "costo_unitario",
                     "importe_bruto", "importe_descuento", "importe_neto", "costo_total", "margen",
                     "es_devolucion", "tiene_promocion", "costo_imputado", "medio_pago", "tipo_movimiento"]

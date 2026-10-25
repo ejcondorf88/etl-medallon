@@ -15,3 +15,11 @@ class ErrorIntegridad(ErrorETL):
 
 class ErrorCalidad(ErrorETL):
     """Al menos un control de calidad falló y no se debe publicar la capa oro."""
+
+
+class ErrorPublicacion(ErrorETL):
+    """La promoción de la zona temporal falló y se restauró la publicación anterior."""
+
+
+class ErrorConcurrencia(ErrorETL):
+    """Otra ejecución del pipeline mantiene el bloqueo y no pudo serializarse."""

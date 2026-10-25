@@ -8,8 +8,8 @@ from typing import Callable
 import pandas as pd
 
 from .base import CapaMedallon
-from .config import (COLUMNAS_ESPERADAS, LLAVES_NATURALES, MEDIO_PAGO_CANONICO,
-                     MEDIO_PAGO_DESCONOCIDO, TIPOS_MOVIMIENTO)
+from .config import (ATRIBUTOS_OBLIGATORIOS, COLUMNAS_ESPERADAS, LLAVES_NATURALES,
+                     MEDIO_PAGO_CANONICO, MEDIO_PAGO_DESCONOCIDO, TIPOS_MOVIMIENTO)
 
 
 # ----------------------------------------------------------------------------
@@ -124,6 +124,11 @@ class LimpiadorDimension(LimpiadorTabla):
         # Regla 1: la llave natural no puede ser nula.
         df = self._rechazar(df, df[llave].isna(), "llave_nula")
 
+        # Regla 1b: los atributos requeridos por el modelo dimensional deben existir.
+        atributos = ATRIBUTOS_OBLIGATORIOS[self.tabla]
+        faltantes = df[atributos].isna().any(axis=1)
+        df = self._rechazar(df, faltantes, "atributo_obligatorio_nulo")
+
         # Regla 2: conversión de tipos (número, entero, fecha).
         df = self._castear(df, self.columnas_numericas, self._a_numero, "numero_invalido")
         df = self._castear(df, self.columnas_enteras, self._a_numero, "entero_invalido")
@@ -184,10 +189,13 @@ class LimpiadorVentas(LimpiadorTabla):
 
     tabla = "ventas"
 
-    def __init__(self, costo_base: pd.Series) -> None:
+    def __init__(self, costo_base: pd.Series, clientes_validos: set[str],
+                 promociones_validas: set[str]) -> None:
         super().__init__()
         # Costo de referencia por producto, usado para completar costos vacíos.
         self._costo_base = costo_base
+        self._clientes_validos = clientes_validos
+        self._promociones_validas = promociones_validas
 
     def _transformar(self, df: pd.DataFrame) -> pd.DataFrame:
         columnas = COLUMNAS_ESPERADAS["ventas"]
@@ -200,12 +208,22 @@ class LimpiadorVentas(LimpiadorTabla):
                         "precio_unitario", "descuento_pct", "tipo_movimiento"]
         df = self._rechazar(df, df[obligatorios].isna().any(axis=1), "campo_obligatorio_nulo")
 
+        # Regla 1c: un ID informado debe existir; el vacío sí representa desconocido.
+        cliente_huerfano = df["cliente_id"].notna() & ~df["cliente_id"].isin(self._clientes_validos)
+        df = self._rechazar(df, cliente_huerfano, "cliente_id_huerfano")
+        promocion_huerfana = df["promocion_id"].notna() & ~df["promocion_id"].isin(self._promociones_validas)
+        df = self._rechazar(df, promocion_huerfana, "promocion_id_huerfano")
+
         # Regla 2: conversión de tipos; si no se puede convertir, la fila se aparta.
         df = self._castear(df, ["fecha_hora"], self._a_fecha_hora, "fecha_hora_invalida")
         df = self._castear(df, ["cantidad"], self._a_numero, "cantidad_invalida")
+        fraccion = df["cantidad"].notna() & (df["cantidad"] % 1 != 0)
+        df = self._rechazar(df, fraccion, "cantidad_no_entera")
         df["cantidad"] = df["cantidad"].astype("int64")
         df = self._castear(df, ["precio_unitario", "descuento_pct", "costo_unitario"],
                            self._a_numero, "numero_invalido")
+        costo_negativo = df["costo_unitario"].notna() & (df["costo_unitario"] < 0)
+        df = self._rechazar(df, costo_negativo, "costo_unitario_negativo")
 
         # Regla 3: unificar el medio de pago (Tarjeta/TARJETA/TC -> Tarjeta, etc.).
         original = df["medio_pago"].copy()
@@ -228,7 +246,10 @@ class LimpiadorVentas(LimpiadorTabla):
 
         # Regla 7: completar costos vacíos con el costo base del producto y marcarlos.
         df["costo_imputado"] = df["costo_unitario"].isna()
-        df.loc[df["costo_imputado"], "costo_unitario"] = df.loc[df["costo_imputado"], "producto_id"].map(self._costo_base)
+        if df["costo_imputado"].any():
+            df.loc[df["costo_imputado"], "costo_unitario"] = df.loc[
+                df["costo_imputado"], "producto_id"
+            ].map(self._costo_base)
         self._registrar("imputar_costo_con_costo_base", int(df["costo_imputado"].sum()),
                         "costo_unitario vacío reemplazado por productos.costo_base (marcado en costo_imputado)")
         df = self._rechazar(df, df["costo_unitario"].isna(), "sin_costo_disponible")
@@ -254,9 +275,13 @@ class CapaPlata(CapaMedallon):
         for limpiador in (LimpiadorTiendas(), LimpiadorProductos(), LimpiadorClientes(), LimpiadorPromociones()):
             resultados[limpiador.tabla] = limpiador.limpiar(bronce[limpiador.tabla])
 
-        # Paso 2: luego los hechos, entregándole el costo base por producto.
+        # Paso 2: luego los hechos, entregándole los catálogos y el costo base por producto.
         costo_base = resultados["productos"].limpio.set_index("producto_id")["costo_base"]
-        resultados["ventas"] = LimpiadorVentas(costo_base).limpiar(bronce["ventas"])
+        clientes_validos = set(resultados["clientes"].limpio["cliente_id"])
+        promociones_validas = set(resultados["promociones"].limpio["promocion_id"])
+        resultados["ventas"] = LimpiadorVentas(
+            costo_base, clientes_validos, promociones_validas
+        ).limpiar(bronce["ventas"])
 
         # Paso 3: persistir cada resultado y la bitácora de reglas.
         bitacora: list[RegistroRegla] = []

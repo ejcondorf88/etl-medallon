@@ -32,6 +32,17 @@ LLAVES_NATURALES: dict[str, str] = {
     "clientes": "cliente_id", "promociones": "promocion_id",
 }
 
+# Atributos que no pueden faltar en cada dimensión publicada.
+ATRIBUTOS_OBLIGATORIOS: dict[str, list[str]] = {
+    "tiendas": ["nombre_tienda", "ciudad", "provincia", "formato", "fecha_apertura", "metros2"],
+    "productos": ["sku", "producto", "categoria", "subcategoria", "marca", "proveedor",
+                  "costo_base", "precio_lista"],
+    "clientes": ["segmento", "ciudad_residencia", "anio_nacimiento", "fecha_alta",
+                 "canal_preferido"],
+    "promociones": ["nombre_promocion", "fecha_inicio", "fecha_fin", "tipo_promocion",
+                    "descuento_objetivo", "categoria_objetivo"],
+}
+
 # Reglas de negocio ---------------------------------------------------------
 TIPOS_MOVIMIENTO: tuple[str, str] = ("Venta", "Devolución")
 
@@ -65,20 +76,36 @@ class Settings:
 
     Estructura esperada (la carpeta bronce es el PUNTO DE PARTIDA y trae los CSV originales):
         data/bronce/   <- datos originales, no se modifican nunca
+        data/_staging/ <- resultados temporales que aún no están aprobados
         data/plata/    <- los genera main.py
         data/oro/      <- los genera main.py (esto es lo que se sube a Power BI)
     """
 
     data_dir: Path = Path("data")
+    output_dir: Path | None = None
+    bronze_source: Path | None = None
+    silver_source: Path | None = None
+    gold_source: Path | None = None
+    quality_source: Path | None = None
+
+    @property
+    def destination_dir(self) -> Path:
+        """Carpeta donde se escriben las capas publicadas o la zona temporal de staging."""
+        return self.output_dir or self.data_dir
+
+    @property
+    def staging_dir(self) -> Path:
+        """Zona temporal aislada para construir y validar antes de publicar."""
+        return self.data_dir / "_staging"
 
     # Cada capa tiene su propia carpeta, así el linaje de los datos es visible.
     @property
     def bronze_dir(self) -> Path:
-        return self.data_dir / "bronce"
+        return self.bronze_source or self.data_dir / "bronce"
 
     @property
     def silver_dir(self) -> Path:
-        return self.data_dir / "plata"
+        return self.silver_source or self.destination_dir / "plata"
 
     @property
     def rejected_dir(self) -> Path:
@@ -86,11 +113,11 @@ class Settings:
 
     @property
     def gold_dir(self) -> Path:
-        return self.data_dir / "oro"
+        return self.gold_source or self.destination_dir / "oro"
 
     @property
     def quality_dir(self) -> Path:
-        return self.data_dir / "calidad"
+        return self.quality_source or self.destination_dir / "calidad"
 
     @property
     def log_dir(self) -> Path:
