@@ -88,6 +88,46 @@ proyecto_etl/
 | Rechazar clientes o promociones informados pero inexistentes | 0 |
 | Rechazar fechas, números o llaves inválidos, signos incoherentes y movimientos desconocidos | 0 |
 
+### Agregar datos en nuevos lotes
+
+Para agregar filas a cualquiera de las cinco tablas sin reemplazar los CSV
+iniciales, crea una carpeta nueva dentro de `data/bronce/lotes/`. Usa un nombre
+único para cada lote y conserva el nombre de tabla en cada archivo:
+
+```text
+data/bronce/
+├── ventas.csv                 # carga inicial
+├── tiendas.csv                # carga inicial
+├── productos.csv              # carga inicial
+├── clientes.csv               # carga inicial
+├── promociones.csv            # carga inicial
+└── lotes/
+    └── lote-2026-10-25-01/
+        ├── ventas.csv         # opcional: filas nuevas de ventas
+        ├── productos.csv      # opcional: productos nuevos
+        └── clientes.csv       # opcional: clientes nuevos
+```
+
+Cada lote puede incluir uno o varios archivos; solo se procesan los que
+incluyas. El job Bronce combina la carga inicial y todos los archivos con el
+mismo nombre de tabla bajo `lotes/`, y guarda las tablas combinadas en el
+artefacto que reciben Plata y Oro. Haz commit/push del nuevo directorio para
+que el cambio en `data/bronce/**` dispare el workflow.
+
+- No reutilices nombres de lote: los lotes deben conservarse para que la
+  siguiente ejecución pueda reconstruir el acumulado sin depender del
+  historial de Git.
+- Los CSV deben respetar exactamente las columnas requeridas de la tabla.
+- Los duplicados se procesan en Plata mediante las reglas existentes:
+  duplicados exactos de ventas se rechazan; llaves naturales repetidas en
+  dimensiones y `venta_id` repetidos en conflicto se apartan con su motivo.
+  Plata conserva la primera fila válida según el orden de la carga inicial y
+  luego los lotes ordenados por nombre.
+- Este mecanismo acumula las entradas, pero vuelve a construir Plata y Oro
+  completos en cada ejecución; no es una carga incremental del modelo.
+- Los archivos deben estar en `lotes/<nombre-lote>/<tabla>.csv`. Un CSV con
+  nombre o ubicación no reconocidos detiene Bronce con un error explícito.
+
 ## Controles de la Fase 2
 
 | Control | Verificación |

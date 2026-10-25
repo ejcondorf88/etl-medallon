@@ -1,6 +1,8 @@
 """CAPA BRONCE: los datos originales, intactos. Esta clase solo los LEE y los valida; nunca los modifica."""
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 
 from .base import CapaMedallon
@@ -13,22 +15,35 @@ class CapaBronce(CapaMedallon):
 
     def ejecutar(self) -> dict[str, pd.DataFrame]:
         resultado: dict[str, pd.DataFrame] = {}
+        lotes_por_tabla: dict[str, list[Path]] = {tabla: [] for tabla in TABLAS}
+        carpeta_lotes = self.settings.bronze_dir / "lotes"
+        if carpeta_lotes.exists():
+            for archivo in sorted(carpeta_lotes.rglob("*.csv")):
+                relativa = archivo.relative_to(carpeta_lotes)
+                if len(relativa.parts) != 2 or archivo.stem not in TABLAS:
+                    raise ErrorEsquema(
+                        f"Archivo CSV de lote no reconocido: {relativa}. "
+                        "Use lotes/<nombre-lote>/<tabla>.csv"
+                    )
+                lotes_por_tabla[archivo.stem].append(archivo)
 
         for tabla in TABLAS:
-            ruta = self.settings.archivo_bronce(tabla)
+            fuentes = [self.settings.archivo_bronce(tabla)]
+            fuentes.extend(lotes_por_tabla[tabla])
 
-            # Paso 1: leer todo como texto para no perder información (ceros a la izquierda, vacíos).
-            df = self.almacen.leer(ruta)
+            partes: list[pd.DataFrame] = []
+            siguiente_fila = 2
+            for ruta in fuentes:
+                # Leer como texto preserva identificadores, incluidos ceros a la izquierda.
+                df = self.almacen.leer(ruta)
+                self._validar_esquema(tabla, df)
+                df = df[COLUMNAS_ESPERADAS[tabla]].copy()
+                df = df.assign(_fila_origen=range(siguiente_fila, siguiente_fila + len(df)))
+                siguiente_fila += len(df)
+                partes.append(df)
+                self.log.info("Bronce | %-11s | %6d filas | %s", tabla, len(df), ruta)
 
-            # Paso 2: verificar el contrato de datos; si falta una columna, se detiene todo.
-            self._validar_esquema(tabla, df)
-
-            # Paso 3: anotar en memoria la fila de origen (trazabilidad hasta el archivo original).
-            #         Solo en memoria: el archivo de bronce no se toca.
-            df = df.assign(_fila_origen=range(2, len(df) + 2))    # la fila 1 es el encabezado
-
-            self.log.info("Bronce | %-11s | %6d filas | %s", tabla, len(df), ruta.name)
-            resultado[tabla] = df
+            resultado[tabla] = pd.concat(partes, ignore_index=True)
 
         return resultado
 

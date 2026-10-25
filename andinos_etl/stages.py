@@ -16,7 +16,7 @@ from . import artefactos
 from .artefactos import copiar_bronce, escribir_plata, leer_plata
 from .bronce import CapaBronce
 from .calidad import CapaCalidad, ContextoCalidad
-from .config import Settings
+from .config import COLUMNAS_ESPERADAS, Settings
 from .integridad import (
     CHECKSUMS_FILENAME,
     MANIFEST_FILENAME,
@@ -111,8 +111,15 @@ def ejecutar_bronce(bronze_dir: Path, output_dir: Path) -> StageResult:
     staging = _preparar_staging(output_dir)
     try:
         settings = Settings(data_dir=bronze_dir.parent, bronze_source=bronze_dir)
-        CapaBronce(settings).ejecutar()
+        datos_bronce = CapaBronce(settings).ejecutar()
         copiar_bronce(bronze_dir, staging)
+        for tabla, df in datos_bronce.items():
+            df[COLUMNAS_ESPERADAS[tabla]].to_csv(
+                staging / f"{tabla}.csv",
+                index=False,
+                encoding="utf-8-sig",
+                lineterminator="\n",
+            )
         version, commit = _git_info()
         created_at = utc_now_iso()
         metadata = {
@@ -123,6 +130,7 @@ def ejecutar_bronce(bronze_dir: Path, output_dir: Path) -> StageResult:
             "git_commit": commit,
             "source": bronze_dir.name,
             "immutable": True,
+            "rows_by_table": {tabla: len(df) for tabla, df in datos_bronce.items()},
         }
         (staging / "stage.json").write_text(
             json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8"
