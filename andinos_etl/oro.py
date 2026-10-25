@@ -25,10 +25,26 @@ class CapaOro(CapaMedallon):
         oro = {"dim_tienda": dim_tienda, "dim_producto": dim_producto, "dim_cliente": dim_cliente,
                "dim_promocion": dim_promocion, "dim_fecha": dim_fecha, "fact_ventas": fact_ventas}
 
-        # Paso 3: persistir cada tabla como CSV listo para importar en Power BI.
+        # Paso 3: persistir cada tabla como CSV individual.
         for nombre, df in oro.items():
             self.almacen.escribir(df, self.settings.gold_dir / f"{nombre}.csv")
             self.log.info("Oro    | %-13s | %6d filas | %2d columnas", nombre, len(df), df.shape[1])
+
+        # Paso 4: un solo Excel con una pestaña por tabla (modelo en estrella).
+        ruta_excel = self.settings.gold_dir / "modelo_estrella.xlsx"
+        with pd.ExcelWriter(ruta_excel, engine="openpyxl") as writer:
+            for nombre, df in oro.items():
+                df_export = df.copy()
+                for col in df_export.columns:
+                    if pd.api.types.is_datetime64_any_dtype(df_export[col]):
+                        df_export[col] = df_export[col].dt.strftime("%Y-%m-%d %H:%M:%S")
+                    elif df_export[col].dtype == object and len(df_export) > 0:
+                        muestra = df_export[col].dropna()
+                        if len(muestra) > 0 and hasattr(muestra.iloc[0], "year"):
+                            df_export[col] = df_export[col].astype(str)
+                df_export.to_excel(writer, sheet_name=nombre, index=False)
+        self.log.info("Oro    | modelo_estrella.xlsx | %d pestañas generadas", len(oro))
+
         return oro
 
     # ---- utilidades --------------------------------------------------------
@@ -47,7 +63,6 @@ class CapaOro(CapaMedallon):
 
     # ---- dimensiones -------------------------------------------------------
     def _dim_tienda(self, df: pd.DataFrame) -> pd.DataFrame:
-        # Se quita el rastro técnico (_fila_origen) y se asigna la llave sustituta.
         return self._con_llave(df.drop(columns="_fila_origen"), "tienda_id", "tienda_key")
 
     def _dim_producto(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -55,16 +70,14 @@ class CapaOro(CapaMedallon):
 
     def _dim_cliente(self, df: pd.DataFrame) -> pd.DataFrame:
         dim = self._con_llave(df.drop(columns="_fila_origen"), "cliente_id", "cliente_key")
-        # Miembro desconocido para las compras sin cliente identificado.
         dim = self._con_miembro_desconocido(dim, "cliente_key", {
             "cliente_id": "SIN_CLIENTE", "segmento": "Sin identificar",
             "ciudad_residencia": "Sin identificar", "canal_preferido": "Sin identificar"})
-        dim["anio_nacimiento"] = dim["anio_nacimiento"].astype("Int64")   # sin ".0" en el CSV
+        dim["anio_nacimiento"] = dim["anio_nacimiento"].astype("Int64")
         return dim
 
     def _dim_promocion(self, df: pd.DataFrame) -> pd.DataFrame:
         dim = self._con_llave(df.drop(columns="_fila_origen"), "promocion_id", "promocion_key")
-        # Miembro desconocido para las líneas vendidas sin promoción.
         return self._con_miembro_desconocido(dim, "promocion_key", {
             "promocion_id": "SIN_PROMO", "nombre_promocion": "Sin promoción",
             "tipo_promocion": "Sin promoción", "categoria_objetivo": "Sin promoción",
@@ -75,7 +88,7 @@ class CapaOro(CapaMedallon):
         fechas = pd.to_datetime(ventas["fecha"])
         dias = pd.date_range(f"{fechas.min().year}-01-01", f"{fechas.max().year}-12-31", freq="D")
         return pd.DataFrame({
-            "fecha_key": dias.strftime("%Y%m%d").astype(int),          # llave entera AAAAMMDD
+            "fecha_key": dias.strftime("%Y%m%d").astype(int),
             "fecha": dias.date,
             "anio": dias.year,
             "trimestre": ["T" + str(q) for q in dias.quarter],
@@ -84,7 +97,7 @@ class CapaOro(CapaMedallon):
             "mes_nombre": [MESES_LARGOS[m - 1] for m in dias.month],
             "anio_mes": dias.strftime("%Y-%m"),
             "dia": dias.day,
-            "dia_semana_num": dias.dayofweek + 1,                      # 1 = lunes ... 7 = domingo
+            "dia_semana_num": dias.dayofweek + 1,
             "dia_semana": [DIAS_SEMANA[d] for d in dias.dayofweek],
             "es_fin_de_semana": (dias.dayofweek >= 5).astype(int),
         })
@@ -94,27 +107,22 @@ class CapaOro(CapaMedallon):
                      d_cliente: pd.DataFrame, d_promocion: pd.DataFrame) -> pd.DataFrame:
         f = ventas.copy()
 
-        # Paso 1: traducir cada ID natural a su llave sustituta con uniones muchos-a-uno.
         f = f.merge(d_tienda[["tienda_id", "tienda_key"]], on="tienda_id", how="left", validate="many_to_one")
         f = f.merge(d_producto[["producto_id", "producto_key"]], on="producto_id", how="left", validate="many_to_one")
         f = f.merge(d_cliente[["cliente_id", "cliente_key"]], on="cliente_id", how="left", validate="many_to_one")
         f = f.merge(d_promocion[["promocion_id", "promocion_key"]], on="promocion_id", how="left", validate="many_to_one")
 
-        # Paso 2: tienda y producto son obligatorios; sin ellos la venta no es analizable.
         for natural, llave in (("tienda_id", "tienda_key"), ("producto_id", "producto_key")):
             huerfanos = f[llave].isna().sum()
             if huerfanos:
                 raise ErrorIntegridad(f"{huerfanos} ventas con {natural} que no existe en su dimensión")
 
-        # Paso 3: cliente y promoción son opcionales. Nulo -> miembro desconocido (0).
-        # Si traen ID pero no existe en la dimensión (llegada tardía), también va a 0 con aviso.
         for natural, llave in (("cliente_id", "cliente_key"), ("promocion_id", "promocion_key")):
             tardios = f[natural].notna() & f[llave].isna()
             if tardios.any():
                 self.log.warning("%d ventas con %s sin dimensión; se asignan a 'desconocido'", tardios.sum(), natural)
             f[llave] = f[llave].fillna(CLAVE_DESCONOCIDA).astype(int)
 
-        # Paso 4: medidas aditivas calculadas una sola vez, aquí, para que todos usen la misma regla.
         f["importe_bruto"] = f["cantidad"] * f["precio_unitario"]
         f["importe_descuento"] = f["importe_bruto"] * f["descuento_pct"]
         f["importe_neto"] = f["importe_bruto"] - f["importe_descuento"]
@@ -125,10 +133,11 @@ class CapaOro(CapaMedallon):
         f["costo_imputado"] = f["costo_imputado"].astype(int)
         f["fecha_key"] = f["fecha_hora"].dt.strftime("%Y%m%d").astype(int)
 
-        columnas = ["venta_id", "fecha_key", "fecha_hora", "tienda_key", "producto_key", "cliente_key",
+        # fecha_hora eliminada: basta con fecha_key
+        columnas = ["venta_id", "fecha_key", "tienda_key", "producto_key", "cliente_key",
                     "promocion_key", "cantidad", "precio_unitario", "descuento_pct", "costo_unitario",
                     "importe_bruto", "importe_descuento", "importe_neto", "costo_total", "margen",
                     "es_devolucion", "tiene_promocion", "costo_imputado", "medio_pago", "tipo_movimiento"]
         monetarias = ["importe_bruto", "importe_descuento", "importe_neto", "costo_total", "margen"]
-        f[monetarias] = f[monetarias].round(4)               # evita ruido de coma flotante
+        f[monetarias] = f[monetarias].round(4)
         return f[columnas].sort_values("venta_id").reset_index(drop=True)

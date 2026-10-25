@@ -10,7 +10,7 @@ class AlmacenCsv:
     """Lee y escribe CSV con una convención única para todo el proyecto."""
 
     ENCODING_LECTURA = "utf-8-sig"   # quita el BOM si el archivo lo trae
-    ENCODING_ESCRITURA = "utf-8"
+    ENCODING_ESCRITURA = "utf-8-sig"  # agrega el BOM para que Excel lo abra bien
 
     def leer(self, ruta: Path) -> pd.DataFrame:
         """Lee un CSV completo como texto, sin interpretar nulos ni tipos (fidelidad al origen)."""

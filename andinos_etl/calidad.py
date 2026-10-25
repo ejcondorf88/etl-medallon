@@ -112,7 +112,8 @@ class PromocionesVigentes(Control):
         f, dp, dprod = ctx.oro["fact_ventas"], ctx.oro["dim_promocion"], ctx.oro["dim_producto"]
         x = (f[f["tiene_promocion"] == 1]
              .merge(dp, on="promocion_key").merge(dprod[["producto_key", "categoria"]], on="producto_key"))
-        dia = pd.to_datetime(x["fecha_hora"]).dt.date
+        # Usamos fecha_key (AAAAMMDD) en lugar de fecha_hora (ya eliminada del hecho)
+        dia = pd.to_datetime(x["fecha_key"].astype(str), format="%Y%m%d").dt.date
         fuera = int(((dia < x["fecha_inicio"]) | (dia > x["fecha_fin"])).sum())
         otra_cat = int((x["categoria"] != x["categoria_objetivo"]).sum())
         return self._resultado("0 fuera de fechas y 0 de otra categoría",
