@@ -48,6 +48,10 @@ class PipelineMedallon:
         inicio = time.perf_counter()
         self._preparar_staging()
         self._mostrar("\n=== FLUJO ETL MEDALLÓN ===")
+        self._mostrar(
+            "Cada etapa escribe primero en staging; calidad debe aprobar antes de "
+            "reemplazar lo publicado. Así un fallo no deja una salida parcial."
+        )
         self._mostrar(f"[1/5] BRONCE  -> lectura desde {self.settings.bronze_dir.resolve()}")
 
         datos_bronce = self.bronce.ejecutar()
@@ -65,13 +69,20 @@ class PipelineMedallon:
         self._mostrar(f"[4/5] CALIDAD -> controles en {self.staging_settings.quality_dir.resolve()}")
         reporte = self.calidad.ejecutar(ContextoCalidad(datos_bronce, resultados_plata, datos_oro))
         if (reporte["estado"] == "FALLO").any():
-            self._mostrar("[5/5] PUBLICACIÓN CANCELADA: existen controles FALLO; la versión anterior no fue modificada")
+            self._mostrar(
+                "[5/5] PUBLICACIÓN CANCELADA: un FALLO significa que no se concilian "
+                "filas, importes o relaciones; la versión anterior permanece intacta. "
+                f"Revise {self.staging_settings.quality_dir / 'reporte_calidad.csv'}."
+            )
             raise ErrorCalidad(
                 "Fallaron controles de calidad críticos; revise "
                 f"{self.staging_settings.quality_dir / 'reporte_calidad.csv'}"
             )
 
-        self._mostrar("[5/5] PUBLICACIÓN -> promoción atómica de la versión aprobada")
+        self._mostrar(
+            "[5/5] PUBLICACIÓN -> todos los controles bloqueantes aprobaron; "
+            "promoción atómica de plata, oro y calidad."
+        )
         self._promover_staging()
         self._mostrar(f"      Publicadas: plata, oro y calidad en {self.settings.destination_dir.resolve()}")
         self.log.info("Pipeline terminado en %.1f s", time.perf_counter() - inicio)

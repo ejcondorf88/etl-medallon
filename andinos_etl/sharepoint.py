@@ -30,17 +30,18 @@ class ConfiguracionSharePoint:
 
     @classmethod
     def desde_entorno(cls) -> "ConfiguracionSharePoint":
-        valores = {
-            "SHAREPOINT_SITE_ID": os.environ.get("SHAREPOINT_SITE_ID"),
-            "SHAREPOINT_FOLDER": os.environ.get("SHAREPOINT_FOLDER"),
-            "AZURE_TENANT_ID": os.environ.get("AZURE_TENANT_ID"),
-            "AZURE_CLIENT_ID": os.environ.get("AZURE_CLIENT_ID"),
-            "AZURE_CLIENT_SECRET": os.environ.get("AZURE_CLIENT_SECRET"),
+        campos = {
+            "site_id": "SHAREPOINT_SITE_ID",
+            "folder": "SHAREPOINT_FOLDER",
+            "tenant_id": "AZURE_TENANT_ID",
+            "client_id": "AZURE_CLIENT_ID",
+            "client_secret": "AZURE_CLIENT_SECRET",
         }
-        faltantes = [nombre for nombre, valor in valores.items() if not valor]
+        valores = {campo: os.environ.get(variable) for campo, variable in campos.items()}
+        faltantes = [variable for campo, variable in campos.items() if not valores[campo]]
         if faltantes:
             raise ErrorPublicacionSharePoint(f"Faltan credenciales o configuración: {', '.join(faltantes)}")
-        return cls(**{clave: str(valor) for clave, valor in valores.items()})
+        return cls(**{campo: str(valor) for campo, valor in valores.items()})
 
 
 def _pedir_json(metodo: str, url: str, token: str, cuerpo: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -162,11 +163,10 @@ def _hash_remoto(configuracion: ConfiguracionSharePoint, token: str, carpeta: st
     return hashlib.sha256(_pedir_bytes(url, token)).hexdigest()
 
 
-def publicar_artifact(
-    artifact_dir: Path,
-    configuracion: ConfiguracionSharePoint,
-    token: str | None = None,
-) -> dict[str, Any]:
+LIBRO_ESTABLE = "modelo_estrella.xlsx"
+
+
+def _validar_publicable(artifact_dir: Path) -> dict[str, Any]:
     manifest = json.loads((artifact_dir / "manifest.json").read_text(encoding="utf-8"))
     gate = json.loads((artifact_dir / "gate.json").read_text(encoding="utf-8"))
     if gate.get("status") != "APPROVED":
@@ -174,6 +174,15 @@ def publicar_artifact(
     commit_esperado = os.environ.get("GITHUB_SHA")
     if commit_esperado and manifest.get("git_commit") != commit_esperado:
         raise ErrorPublicacionSharePoint("El manifest no corresponde al commit de esta ejecución")
+    return manifest
+
+
+def publicar_artifact(
+    artifact_dir: Path,
+    configuracion: ConfiguracionSharePoint,
+    token: str | None = None,
+) -> dict[str, Any]:
+    manifest = _validar_publicable(artifact_dir)
     token = token or obtener_token(configuracion)
     run_id = os.environ.get("GITHUB_RUN_ID", "local")
     run_attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "1")
@@ -198,10 +207,46 @@ def publicar_artifact(
     }
 
 
+def publicar_copia_estable(
+    artifact_dir: Path,
+    configuracion: ConfiguracionSharePoint,
+    token: str | None = None,
+    carpeta: str | None = None,
+) -> dict[str, Any]:
+    manifest = _validar_publicable(artifact_dir)
+    candidatos = [ruta for ruta in artifact_dir.rglob(LIBRO_ESTABLE) if ruta.is_file()]
+    if len(candidatos) != 1:
+        raise ErrorPublicacionSharePoint(
+            f"Se esperaba un único {LIBRO_ESTABLE} en el artifact y hay {len(candidatos)}"
+        )
+    libro = candidatos[0]
+    destino = (carpeta or configuracion.folder).strip("/")
+    if not destino:
+        raise ErrorPublicacionSharePoint("La carpeta destino de la copia estable está vacía")
+    token = token or obtener_token(configuracion)
+    _asegurar_carpeta(configuracion, token, destino)
+    _subir_archivo(configuracion, token, destino, libro)
+    hash_local = hashlib.sha256(libro.read_bytes()).hexdigest()
+    if hash_local != _hash_remoto(configuracion, token, destino, libro):
+        raise ErrorPublicacionSharePoint(
+            f"El hash remoto no coincide para {libro.name} en la copia estable"
+        )
+    return {
+        "status": "STABLE_PUBLISHED",
+        "site_id": configuracion.site_id,
+        "folder": destino,
+        "file": libro.name,
+        "sha256": hash_local,
+        "commit": manifest.get("git_commit"),
+    }
+
+
 def main() -> int:
     artifact_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("andinos-model-approved")
     try:
-        resultado = publicar_artifact(artifact_dir, ConfiguracionSharePoint.desde_entorno())
+        configuracion = ConfiguracionSharePoint.desde_entorno()
+        resultado = publicar_artifact(artifact_dir, configuracion)
+        resultado["copia_estable"] = publicar_copia_estable(artifact_dir, configuracion)
         print(json.dumps(resultado, ensure_ascii=False, sort_keys=True))
         return 0
     except (ErrorPublicacionSharePoint, OSError, ValueError) as error:

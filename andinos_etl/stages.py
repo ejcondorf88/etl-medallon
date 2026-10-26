@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+from openpyxl import load_workbook
 
 from . import artefactos
 from .artefactos import copiar_bronce, escribir_plata, leer_plata
@@ -108,6 +109,11 @@ def _verificar_entrada(artifact_dir: Path) -> None:
 
 
 def ejecutar_bronce(bronze_dir: Path, output_dir: Path) -> StageResult:
+    print(
+        "[ETAPA BRONCE] Construye un artefacto portable e inmutable. "
+        "El manifiesto y los checksums permiten verificar origen e integridad después del transporte.",
+        flush=True,
+    )
     staging = _preparar_staging(output_dir)
     try:
         settings = Settings(data_dir=bronze_dir.parent, bronze_source=bronze_dir)
@@ -153,6 +159,11 @@ def ejecutar_bronce(bronze_dir: Path, output_dir: Path) -> StageResult:
 
 
 def ejecutar_plata(bronze_dir: Path, output_dir: Path) -> StageResult:
+    print(
+        "[ETAPA PLATA] Verifica primero los checksums de Bronce; solo procesa una entrada "
+        "íntegra para que la limpieza y su bitácora se puedan reproducir.",
+        flush=True,
+    )
     staging = _preparar_staging(output_dir)
     try:
         _verificar_entrada(bronze_dir)
@@ -213,6 +224,11 @@ def _escribir_gate(ruta: Path, gate: dict[str, Any]) -> None:
 
 
 def ejecutar_oro(bronze_dir: Path, plata_dir: Path, output_dir: Path) -> StageResult:
+    print(
+        "[ETAPA ORO] Verifica checksums de Bronce y Plata antes de modelar. "
+        "El gate reúne controles; únicamente APPROVED produce un bundle consumible.",
+        flush=True,
+    )
     staging = _preparar_staging(output_dir)
     try:
         _verificar_entrada(bronze_dir)
@@ -231,6 +247,12 @@ def ejecutar_oro(bronze_dir: Path, plata_dir: Path, output_dir: Path) -> StageRe
         reporte = CapaCalidad(settings).ejecutar(contexto)
         gate = _crear_gate(reporte)
         if gate["status"] == "REJECTED":
+            print(
+                f"[ETAPA ORO] REJECTED: {gate['failures']} fallo(s), "
+                f"{gate['warnings']} advertencia(s). No se crea el bundle aprobado; "
+                "se conserva diagnóstico para corregir la causa.",
+                flush=True,
+            )
             diagnostico = staging / "diagnostico"
             (diagnostico / "calidad").mkdir(parents=True, exist_ok=True)
             shutil.copy2(staging_quality / "reporte_calidad.csv", diagnostico / "calidad" / "reporte_calidad.csv")
@@ -268,7 +290,10 @@ def ejecutar_oro(bronze_dir: Path, plata_dir: Path, output_dir: Path) -> StageRe
             costo_total=costo_total,
             margen=round(ventas_netas - costo_total, 2),
             quality_gate=gate,
-            extra={"fact_rows": len(hechos)},
+            extra={
+                "fact_rows": len(hechos),
+                "rows_by_table": {nombre: len(df) for nombre, df in datos_oro.items()},
+            },
         )
         escribir_manifest(manifest, bundle / MANIFEST_FILENAME)
         generar_checksums(bundle)
@@ -276,13 +301,79 @@ def ejecutar_oro(bronze_dir: Path, plata_dir: Path, output_dir: Path) -> StageRe
         shutil.rmtree(staging_quality, ignore_errors=True)
         _promover(staging, output_dir)
         approved = output_dir / APPROVED_BUNDLE_NAME
+        print(
+            f"[ETAPA ORO] APPROVED: {gate['warnings']} advertencia(s), 0 fallos. "
+            "Bundle con modelo, reporte de calidad, reglas de limpieza, manifiesto y checksums.",
+            flush=True,
+        )
     except Exception:
         shutil.rmtree(staging, ignore_errors=True)
         raise
     return StageResult("oro", "APPROVED", approved, tuple(sorted(approved.rglob("*"))), manifest, gate)
 
 
+def _conteos_csv(modelo_dir: Path) -> dict[str, int]:
+    return {
+        ruta.stem: int(len(pd.read_csv(ruta, encoding="utf-8-sig")))
+        for ruta in sorted(modelo_dir.glob("*.csv"))
+    }
+
+
+def _conteos_xlsx(ruta: Path) -> dict[str, int]:
+    conteos: dict[str, int] = {}
+    libro = load_workbook(ruta, read_only=True, data_only=True)
+    try:
+        for hoja in libro.worksheets:
+            filas = sum(
+                1
+                for fila in hoja.iter_rows(min_row=2, values_only=True)
+                if any(valor is not None for valor in fila)
+            )
+            conteos[hoja.title] = filas
+    finally:
+        libro.close()
+    return conteos
+
+
+def _verificar_conteos(artifact_dir: Path, manifest: dict[str, Any]) -> list[str]:
+    esperados = manifest.get("rows_by_table")
+    if not isinstance(esperados, dict) or not esperados:
+        return ["El manifest no registra rows_by_table"]
+    modelo_dir = artifact_dir / "modelo_estrella"
+    xlsx = artifact_dir / "modelo_estrella.xlsx"
+    if not modelo_dir.is_dir():
+        return ["Falta la carpeta: modelo_estrella"]
+    if not xlsx.is_file():
+        return ["Falta archivo: modelo_estrella.xlsx"]
+    try:
+        csvs = _conteos_csv(modelo_dir)
+        hojas = _conteos_xlsx(xlsx)
+    except Exception as error:
+        return [f"No se pudieron leer los conteos del bundle: {type(error).__name__}: {error}"]
+    errores: list[str] = []
+    for tabla in sorted(set(esperados) | set(csvs) | set(hojas)):
+        esperado = esperados.get(tabla)
+        filas_csv = csvs.get(tabla)
+        filas_hoja = hojas.get(tabla)
+        if esperado is None:
+            errores.append(f"{tabla}: presente en el bundle pero no en rows_by_table")
+        elif filas_csv is None:
+            errores.append(f"{tabla}: falta el CSV modelo_estrella/{tabla}.csv")
+        elif filas_hoja is None:
+            errores.append(f"{tabla}: falta la hoja {tabla} en modelo_estrella.xlsx")
+        elif not esperado == filas_csv == filas_hoja:
+            errores.append(
+                f"Conteos distintos en {tabla}: manifest {esperado} | CSV {filas_csv} | Excel {filas_hoja}"
+            )
+    return errores
+
+
 def verificar_artifact(artifact_dir: Path) -> StageResult:
+    print(
+        "[VERIFICAR] Comprueba hashes para detectar cambios, valida manifest y gate, "
+        "y compara conteos de filas entre CSV, Excel y manifiesto para detectar artefactos incompletos.",
+        flush=True,
+    )
     resultado_checksums = verificar_checksums(artifact_dir)
     errores = list(resultado_checksums.errores)
     manifest_path = artifact_dir / MANIFEST_FILENAME
@@ -307,6 +398,14 @@ def verificar_artifact(artifact_dir: Path) -> StageResult:
             errores.append("Falta archivo: gate.json")
         elif gate and gate.get("status") != "APPROVED":
             errores.append(f"Quality gate no aprobado: {gate.get('status')}")
+        if manifest is not None:
+            errores.extend(_verificar_conteos(artifact_dir, manifest))
+    if errores:
+        print(f"[VERIFICAR] ERROR: {len(errores)} problema(s) detectado(s).", flush=True)
+        for error in errores:
+            print(f"[VERIFICAR]   - {error}", flush=True)
+    else:
+        print("[VERIFICAR] OK: integridad, gate y conteos verificados.", flush=True)
     return StageResult(
         "verificar",
         "OK" if not errores else "ERROR",

@@ -1,11 +1,13 @@
+import json
 from pathlib import Path
 
 import pandas as pd
 
 import pytest
+from openpyxl import load_workbook
 
 from andinos_etl.artefactos import leer_plata
-from andinos_etl.integridad import ErrorIntegridadArtifact
+from andinos_etl.integridad import ErrorIntegridadArtifact, generar_checksums
 from andinos_etl.stages import APPROVED_BUNDLE_NAME, ejecutar_bronce, ejecutar_oro, ejecutar_plata, verificar_artifact
 
 
@@ -50,6 +52,17 @@ def _crear_bronze(raiz: Path) -> Path:
     for tabla, df in tablas.items():
         df.to_csv(bronze / f"{tabla}.csv", index=False, encoding="utf-8-sig")
     return bronze
+
+
+def _bundle_aprobado(raiz: Path) -> Path:
+    bronze = _crear_bronze(raiz)
+    bronze_artifact = raiz / "bronze-artifact"
+    plata_artifact = raiz / "plata-artifact"
+    output = raiz / "output"
+    ejecutar_bronce(bronze, bronze_artifact)
+    ejecutar_plata(bronze_artifact, plata_artifact)
+    ejecutar_oro(bronze_artifact, plata_artifact, output)
+    return output / APPROVED_BUNDLE_NAME
 
 
 def test_round_trip_bronze_plata_conserva_tipos_y_trazabilidad(tmp_path: Path) -> None:
@@ -126,6 +139,10 @@ def test_oro_approved_crea_bundle_exacto(tmp_path: Path) -> None:
     assert resultado.manifest is not None
     assert resultado.manifest["rows_processed"] == 2
     assert resultado.manifest["fact_rows"] == 2
+    assert set(resultado.manifest["rows_by_table"]) == {
+        "dim_tienda", "dim_producto", "dim_cliente", "dim_promocion", "dim_fecha", "fact_ventas",
+    }
+    assert resultado.manifest["rows_by_table"]["fact_ventas"] == 2
     assert resultado.manifest["ventas_netas"] == 25.0
     assert resultado.manifest["costo_total"] == 10.0
     assert resultado.manifest["margen"] == 15.0
@@ -157,3 +174,52 @@ def test_fallo_no_crea_bundle_approved(tmp_path: Path) -> None:
     assert not (output / APPROVED_BUNDLE_NAME).exists()
     assert (output / "diagnostico" / "gate.json").is_file()
     assert (output / "diagnostico" / "calidad" / "reporte_calidad.csv").is_file()
+
+
+def test_verificar_detecta_divergencia_entre_csv_y_excel(tmp_path: Path) -> None:
+    bundle = _bundle_aprobado(tmp_path)
+    libro = load_workbook(bundle / "modelo_estrella.xlsx")
+    hoja = libro["fact_ventas"]
+    hoja.append([0] * hoja.max_column)
+    libro.save(bundle / "modelo_estrella.xlsx")
+    generar_checksums(bundle)
+
+    resultado = verificar_artifact(bundle)
+
+    assert not resultado.ok
+    assert any("Conteos distintos en fact_ventas" in error for error in resultado.errors)
+
+
+def test_verificar_detecta_manifest_conteo_distinto_del_bundle(tmp_path: Path) -> None:
+    bundle = _bundle_aprobado(tmp_path)
+    ruta_manifest = bundle / "manifest.json"
+    manifest = json.loads(ruta_manifest.read_text(encoding="utf-8"))
+    manifest["rows_by_table"]["fact_ventas"] = 999
+    ruta_manifest.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    generar_checksums(bundle)
+
+    resultado = verificar_artifact(bundle)
+
+    assert not resultado.ok
+    assert any(
+        "Conteos distintos en fact_ventas: manifest 999 | CSV 2 | Excel 2" in error
+        for error in resultado.errors
+    )
+
+
+def test_verificar_exige_rows_by_table_en_el_manifest(tmp_path: Path) -> None:
+    bundle = _bundle_aprobado(tmp_path)
+    ruta_manifest = bundle / "manifest.json"
+    manifest = json.loads(ruta_manifest.read_text(encoding="utf-8"))
+    manifest.pop("rows_by_table")
+    ruta_manifest.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    generar_checksums(bundle)
+
+    resultado = verificar_artifact(bundle)
+
+    assert not resultado.ok
+    assert any("rows_by_table" in error for error in resultado.errors)

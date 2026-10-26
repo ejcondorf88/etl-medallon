@@ -11,6 +11,35 @@ from .base import CapaMedallon
 from .config import (ATRIBUTOS_OBLIGATORIOS, COLUMNAS_ESPERADAS, LLAVES_NATURALES,
                      MEDIO_PAGO_CANONICO, MEDIO_PAGO_DESCONOCIDO, TIPOS_MOVIMIENTO)
 
+EXPLICACIONES_REGLA = {
+    "normalizar_texto": "unifica espacios y vacíos para que las validaciones de nulos sean consistentes",
+    "rechazar:llave_nula": "impide publicar dimensiones sin identificador natural",
+    "rechazar:atributo_obligatorio_nulo": "evita dimensiones incompletas que no se pueden analizar correctamente",
+    "rechazar:numero_invalido": "evita cálculos con valores numéricos que no se pudieron interpretar",
+    "rechazar:entero_invalido": "protege campos que requieren números enteros",
+    "rechazar:fecha_invalida": "evita fechas que no se pueden ordenar ni relacionar con el calendario",
+    "rechazar:llave_duplicada": "garantiza una sola fila por identificador de dimensión",
+    "rechazar:metros2_no_positivo": "evita superficies inválidas y divisiones sin sentido en ventas por m²",
+    "rechazar:precio_o_costo_no_positivo": "evita precios o costos de producto que distorsionen márgenes",
+    "rechazar:descuento_fuera_de_rango": "mantiene el descuento de promoción como una fracción entre 0 y 1",
+    "rechazar:fechas_invertidas": "asegura que una promoción no termine antes de comenzar",
+    "rechazar:duplicado_exacto": "evita contar dos veces una misma fila repetida en la fuente",
+    "rechazar:campo_obligatorio_nulo": "protege los campos necesarios para identificar y calcular una línea de venta",
+    "rechazar:cliente_id_huerfano": "impide asignar una venta a un cliente informado que no existe",
+    "rechazar:promocion_id_huerfano": "impide asignar una venta a una promoción informada que no existe",
+    "rechazar:fecha_hora_invalida": "garantiza que cada venta pueda ubicarse en el tiempo",
+    "rechazar:cantidad_invalida": "evita cantidades no interpretables",
+    "rechazar:cantidad_no_entera": "mantiene unidades vendidas como unidades enteras",
+    "rechazar:costo_unitario_negativo": "evita costos negativos que falsearían el margen",
+    "unificar_medio_pago": "agrupa distintas escrituras del POS bajo categorías comparables",
+    "rechazar:tipo_movimiento_invalido": "limita los movimientos a Venta o Devolución",
+    "rechazar:signo_cantidad_incoherente": "mantiene ventas positivas y devoluciones negativas",
+    "rechazar:precio_o_descuento_fuera_de_rango": "evita precios no positivos y descuentos fuera del rango 0–1",
+    "imputar_costo_con_costo_base": "completa costos ausentes con referencia de producto y marca la imputación",
+    "rechazar:sin_costo_disponible": "impide publicar líneas sin costo real ni costo de referencia",
+    "rechazar:venta_id_duplicado_conflicto": "garantiza un ID único por línea y aparta duplicados no idénticos",
+}
+
 
 # ----------------------------------------------------------------------------
 # Estructuras de resultado
@@ -73,11 +102,23 @@ class LimpiadorTabla(ABC):
 
     def _normalizar_texto(self, df: pd.DataFrame) -> pd.DataFrame:
         """Recorta espacios y transforma '' en nulo, para que `isna()` funcione de verdad."""
+        filas_modificadas = pd.Series(False, index=df.index)
         for col in df.columns:
             if col == "_fila_origen":
                 continue
-            df[col] = df[col].str.strip().replace("", pd.NA)
-        self._registrar("normalizar_texto", 0, "strip de espacios y vacíos a nulo")
+            original = df[col]
+            normalizado = original.str.strip().replace("", pd.NA)
+            cambio = (
+                original.fillna("").astype(str).ne(normalizado.fillna("").astype(str))
+                | original.isna().ne(normalizado.isna())
+            )
+            filas_modificadas |= cambio
+            df[col] = normalizado
+        self._registrar(
+            "normalizar_texto",
+            int(filas_modificadas.sum()),
+            "filas con espacios recortados o cadenas vacías convertidas a nulo",
+        )
         return df
 
     def _rechazar(self, df: pd.DataFrame, mascara: pd.Series, motivo: str) -> pd.DataFrame:
@@ -269,6 +310,16 @@ class CapaPlata(CapaMedallon):
     """Orquesta la limpieza de todas las tablas y guarda limpio, rechazado y bitácora."""
 
     def ejecutar(self, bronce: dict[str, pd.DataFrame]):
+        print(
+            "[PLATA] Limpia cada tabla sin borrar evidencia: normaliza texto, convierte tipos, "
+            "aplica reglas de negocio y separa rechazados con motivo y linaje.",
+            flush=True,
+        )
+        print(
+            "[PLATA] Primero valida dimensiones; después usa sus catálogos para verificar "
+            "referencias de ventas e imputar costos faltantes desde productos.",
+            flush=True,
+        )
         resultados: dict[str, ResultadoLimpieza] = {}
 
         # Paso 1: primero las dimensiones (la tabla de ventas necesita el costo base de productos).
@@ -289,6 +340,19 @@ class CapaPlata(CapaMedallon):
             self.almacen.escribir(res.limpio, self.settings.silver_dir / f"{tabla}.csv")
             self.almacen.escribir(res.rechazado, self.settings.rejected_dir / f"{tabla}_rechazados.csv")
             bitacora.extend(res.reglas)
+            print(
+                f"[PLATA] {tabla}: {len(res.limpio):,} válidas; "
+                f"{len(res.rechazado):,} rechazadas. Detalle de reglas:",
+                flush=True,
+            )
+            for regla in res.reglas:
+                motivo = EXPLICACIONES_REGLA.get(regla.regla, "regla aplicada para proteger la calidad del dato")
+                detalle = f" | {regla.detalle}" if regla.detalle else ""
+                print(
+                    f"[PLATA]   {regla.regla}: {regla.filas_afectadas:,} fila(s) afectada(s) "
+                    f"— {motivo}{detalle}",
+                    flush=True,
+                )
             self.log.info("Plata  | %-11s | %6d válidas | %4d rechazadas", tabla, len(res.limpio), len(res.rechazado))
 
         reglas = pd.DataFrame([vars(r) for r in bitacora])

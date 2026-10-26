@@ -13,7 +13,18 @@ class CapaOro(CapaMedallon):
     """Construye dimensiones con llaves sustitutas (enteros) y una tabla de hechos aditiva."""
 
     def ejecutar(self, plata: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
+        print(
+            "[ORO] Convierte datos validados en un modelo estrella para análisis: "
+            "dimensiones con llaves sustitutas y un hecho con grano de línea de venta.",
+            flush=True,
+        )
         # Paso 1: dimensiones. Cada una recibe una llave sustituta (entero) estable y ordenada.
+        print(
+            "[ORO] Paso 1/4: crea las dimensiones ordenando IDs naturales para obtener "
+            "llaves enteras reproducibles; cliente y promoción admiten miembro 0 "
+            "solo cuando la referencia está vacía.",
+            flush=True,
+        )
         dim_tienda = self._dim_tienda(plata["tiendas"])
         dim_producto = self._dim_producto(plata["productos"])
         dim_cliente = self._dim_cliente(plata["clientes"])
@@ -21,17 +32,33 @@ class CapaOro(CapaMedallon):
         dim_fecha = self._dim_fecha(plata["ventas"])
 
         # Paso 2: tabla de hechos, que traduce los IDs de origen a las llaves sustitutas.
+        print(
+            "[ORO] Paso 2/4: convierte IDs en llaves dimensionales y calcula importes "
+            "bruto, descuento, neto, costo y margen; una tienda o producto sin dimensión "
+            "es error porque rompe relaciones analíticas.",
+            flush=True,
+        )
         fact_ventas = self._fact_ventas(plata["ventas"], dim_tienda, dim_producto, dim_cliente, dim_promocion)
 
         oro = {"dim_tienda": dim_tienda, "dim_producto": dim_producto, "dim_cliente": dim_cliente,
                "dim_promocion": dim_promocion, "dim_fecha": dim_fecha, "fact_ventas": fact_ventas}
 
         # Paso 3: persistir cada tabla como CSV individual.
+        print(
+            "[ORO] Paso 3/4: escribe CSV individuales para facilitar consumo e inspección.",
+            flush=True,
+        )
         for nombre, df in oro.items():
             self.almacen.escribir(df, self.settings.gold_dir / f"{nombre}.csv")
+            print(f"[ORO]   {nombre}: {len(df):,} filas, {df.shape[1]} columnas.", flush=True)
             self.log.info("Oro    | %-13s | %6d filas | %2d columnas", nombre, len(df), df.shape[1])
 
         # Paso 4: un solo Excel con una pestaña por tabla (modelo en estrella).
+        print(
+            "[ORO] Paso 4/4: genera modelo_estrella.xlsx con una pestaña por tabla "
+            "para inspección y carga en herramientas analíticas.",
+            flush=True,
+        )
         ruta_excel = self.settings.gold_dir / "modelo_estrella.xlsx"
         with pd.ExcelWriter(ruta_excel, engine="openpyxl") as writer:
             for nombre, df in oro.items():
@@ -94,6 +121,11 @@ class CapaOro(CapaMedallon):
         """Calendario continuo por años completos: sin huecos, como exige la inteligencia de tiempo."""
         fechas = pd.to_datetime(ventas["fecha"])
         dias = pd.date_range(f"{fechas.min().year}-01-01", f"{fechas.max().year}-12-31", freq="D")
+        print(
+            f"[ORO] dim_fecha: calendario diario continuo {dias.min():%Y-%m-%d} a "
+            f"{dias.max():%Y-%m-%d}; cubre años completos para evitar huecos en análisis temporales.",
+            flush=True,
+        )
         return pd.DataFrame({
             "fecha_key": dias.strftime("%Y%m%d").astype(int),
             "fecha": dias.date,

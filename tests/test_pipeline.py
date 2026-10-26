@@ -80,6 +80,22 @@ def test_ejecucion_es_idempotente(tmp_path: Path) -> None:
     assert not settings.staging_dir.exists()
 
 
+def test_salida_explica_capas_reglas_y_controles(tmp_path: Path, capsys) -> None:
+    settings = Settings(data_dir=tmp_path / "data")
+    crear_bronze(settings.data_dir)
+
+    PipelineMedallon(settings).ejecutar()
+
+    salida = capsys.readouterr().out
+    assert "[BRONCE] Lee la fuente sin modificarla." in salida
+    assert "[PLATA] Limpia cada tabla sin borrar evidencia:" in salida
+    assert "[PLATA]   rechazar:signo_cantidad_incoherente:" in salida
+    assert "[ORO] Paso 2/4:" in salida
+    assert "[CALIDAD] C1 Conciliación de filas |" in salida
+    assert "qué protege: Filas de bronce = filas de plata + rechazadas" in salida
+    assert "cualquier FALLO bloquea la publicación." in salida
+
+
 def test_ejecucion_concurrente_queda_serializada(tmp_path: Path) -> None:
     settings = Settings(data_dir=tmp_path / "data")
     crear_bronze(settings.data_dir)

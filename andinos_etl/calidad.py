@@ -483,9 +483,32 @@ class CapaCalidad(CapaMedallon):
         ]
 
     def ejecutar(self, ctx: ContextoCalidad) -> pd.DataFrame:
-        resultados = [c.evaluar(ctx) for c in self.controles]
+        print(
+            "[CALIDAD] Ejecuta conciliaciones entre capas y verificaciones de integridad "
+            "antes de publicar; los montos se recalculan desde Bronce cuando es posible. "
+            "Busca detectar pérdidas, duplicaciones, cálculos divergentes y referencias inválidas.",
+            flush=True,
+        )
+        resultados = []
+        for control in self.controles:
+            resultado = control.evaluar(ctx)
+            resultados.append(resultado)
+            print(
+                f"[CALIDAD] {resultado.control} | {resultado.estado} | "
+                f"qué protege: {resultado.descripcion} | "
+                f"esperado: {resultado.esperado} | obtenido: {resultado.obtenido}",
+                flush=True,
+            )
         reporte = pd.DataFrame([vars(r) for r in resultados])
         self.almacen.escribir(reporte, self.settings.quality_dir / "reporte_calidad.csv")
         for r in resultados:
             self.log.info("Calidad | %-30s | %-11s | %s", r.control, r.estado, r.obtenido)
+        fallos = sum(r.estado == "FALLO" for r in resultados)
+        advertencias = sum(r.estado == "ADVERTENCIA" for r in resultados)
+        print(
+            f"[CALIDAD] Resumen: {len(resultados) - fallos - advertencias} OK, "
+            f"{advertencias} advertencia(s), {fallos} fallo(s). "
+            "Las advertencias quedan documentadas; cualquier FALLO bloquea la publicación.",
+            flush=True,
+        )
         return reporte

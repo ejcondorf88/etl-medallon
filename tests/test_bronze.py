@@ -56,6 +56,20 @@ def test_bronce_no_modifica_los_archivos_de_origen(tmp_path: Path) -> None:
     assert ruta.read_bytes() == contenido_previo
 
 
+def test_conjunto_base_del_caso_preserva_conteos_de_referencia() -> None:
+    raiz = Path(__file__).resolve().parents[1]
+    bronze_dir = raiz / "data" / "bronce"
+
+    resultado = CapaBronce(Settings(data_dir=raiz / "data")).ejecutar()
+
+    assert len(resultado["ventas"]) == 18_055
+    assert len(resultado["tiendas"]) == 12
+    assert len(resultado["productos"]) == 144
+    assert len(resultado["clientes"]) == 1_800
+    assert len(resultado["promociones"]) == 20
+    assert not (bronze_dir / "lotes" / "lote-demo-productos-2026-10-25").exists()
+
+
 def _inicializar_bronce_lotes(raiz: Path) -> tuple[Path, dict[str, pd.DataFrame]]:
     settings = Settings(data_dir=raiz / "data")
     crear_bronze(settings.data_dir)
