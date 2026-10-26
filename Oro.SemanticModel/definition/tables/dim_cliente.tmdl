@@ -2,7 +2,10 @@ table dim_cliente
 	lineageTag: 46c59951-3d86-4895-ba73-da4de0f8f75d
 
 	column cliente_key
+
+		isHidden
 		dataType: int64
+		isKey
 		formatString: 0
 		lineageTag: 9de6de99-833d-4121-852b-86ba8a02d6dd
 		summarizeBy: none
@@ -11,6 +14,8 @@ table dim_cliente
 		annotation SummarizationSetBy = Automatic
 
 	column cliente_id
+
+		isHidden
 		dataType: string
 		lineageTag: 2de6047a-eb4f-4856-b268-08d858566c48
 		summarizeBy: none
@@ -19,6 +24,7 @@ table dim_cliente
 		annotation SummarizationSetBy = Automatic
 
 	column segmento
+
 		dataType: string
 		lineageTag: 136ba2d3-7665-4aee-8a00-76e8f679131d
 		summarizeBy: none
@@ -27,6 +33,8 @@ table dim_cliente
 		annotation SummarizationSetBy = Automatic
 
 	column ciudad_residencia
+
+		isHidden
 		dataType: string
 		lineageTag: 0b0e0f2d-630b-4224-88d5-9937d988bdd6
 		summarizeBy: none
@@ -35,6 +43,8 @@ table dim_cliente
 		annotation SummarizationSetBy = Automatic
 
 	column anio_nacimiento
+
+		isHidden
 		dataType: int64
 		formatString: 0
 		lineageTag: fbfa2cc0-8bd1-4003-acfa-b3b9c083ea3b
@@ -44,22 +54,21 @@ table dim_cliente
 		annotation SummarizationSetBy = Automatic
 
 	column fecha_alta
+
+		isHidden
 		dataType: dateTime
 		formatString: Long Date
 		lineageTag: d7457357-b80a-48da-b1a6-f9933ac607a6
 		summarizeBy: none
 		sourceColumn: fecha_alta
 
-		variation Variation
-			isDefault
-			relationship: 7567a597-8151-48e1-88d8-1c0c6a1e5d6a
-			defaultHierarchy: LocalDateTable_508bfe84-7020-43fc-b206-aa97b4485a98.'Jerarquía de fechas'
-
 		annotation SummarizationSetBy = Automatic
 
 		annotation UnderlyingDateTimeDataType = Date
 
 	column canal_preferido
+
+		isHidden
 		dataType: string
 		lineageTag: 8371d621-092d-4f1f-a6a8-ae2896f0f7a6
 		summarizeBy: none
@@ -81,4 +90,3 @@ table dim_cliente
 	annotation PBI_ResultType = Table
 
 	annotation PBI_NavigationStepName = Navegación
-

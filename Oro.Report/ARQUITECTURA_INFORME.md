@@ -56,11 +56,11 @@ Los identificadores largos de carpeta de página son identificadores internos. L
 
 ## 4. Estructura y páginas
 
-Las cuatro páginas tienen lienzo de **1280 × 720** y modo de ajuste **FitToPage**. En las definiciones se cuentan **62 visuales**: 20 en Panel, 15 en Productos, 14 en Tiendas y 13 en Promociones. Los conteos incluyen tarjetas, segmentadores, gráficos, tablas/matrices y cuadros de texto decorativos.
+Las páginas tienen modo de ajuste **FitToPage**. Panel usa un lienzo de **1280 × 800** para acomodar dos filas de indicadores; las otras tres páginas conservan **1280 × 720**. En las definiciones se cuentan **69 visuales**: 27 en Panel, 15 en Productos, 14 en Tiendas y 13 en Promociones. Los conteos incluyen tarjetas, segmentadores, gráficos, tablas/matrices y cuadros de texto decorativos.
 
 ### Panel — resumen ejecutivo
 
-Incluye tarjetas de ventas netas, margen, porcentaje de margen, crecimiento, porcentaje de devoluciones y una tarjeta llamada **Ticket promedio**. Presenta:
+Incluye dos filas de tarjetas. La primera conserva ventas netas, margen, porcentaje de margen, crecimiento, porcentaje de devoluciones y **Ticket promedio**. La segunda añade Coste, Descuentos, Ventas brutas, Ventas a pérdida, porcentaje de costo imputado, descuento efectivo y clientes no identificados. Presenta:
 
 - Tendencia mensual de ventas netas y margen por `dim_fecha[anio_mes]`.
 - Ventas por categoría y por ciudad.
@@ -99,12 +99,12 @@ Los visuales usan campos de las dimensiones para agrupar y segmentar y medidas d
 
 | Página | Atributos usados | Medidas utilizadas |
 |---|---|---|
-| Panel | `dim_fecha[anio_mes]`, `dim_fecha[anio]`, `dim_producto[categoria]`, `dim_producto[producto]`, `dim_tienda[ciudad]`, `dim_tienda[formato]`, `dim_cliente[segmento]`, `fact_ventas[medio_pago]` | Ventas netas, margen bruto, porcentaje de margen, crecimiento, porcentaje de devoluciones y ticket promedio. |
+| Panel | `dim_fecha[anio_mes]`, `dim_fecha[anio]`, `dim_producto[categoria]`, `dim_producto[producto]`, `dim_tienda[ciudad]`, `dim_tienda[formato]`, `dim_cliente[segmento]`, `fact_ventas[medio_pago]` | Ventas netas, margen bruto, porcentaje de margen, crecimiento, porcentaje de devoluciones, ticket promedio, coste, descuentos, ventas brutas, ventas a pérdida, porcentaje de costo imputado, descuento efectivo y clientes no identificados. |
 | Productos | `dim_producto[categoria]`, `subcategoria`, `marca`, `proveedor` y `producto` | Ventas netas, margen bruto, porcentaje de margen, unidades, crecimiento y descuento medio. |
 | Tiendas | `dim_tienda[ciudad]`, `formato`, `provincia` y `nombre_tienda` | Ventas netas, margen bruto, porcentaje de margen, ventas por m² y ticket promedio. |
 | Promociones | `dim_promocion[categoria_objetivo]`, `tipo_promocion` y `nombre_promocion` | Ventas netas, unidades, margen porcentual, clientes con compra, transacciones, porcentaje con promoción y descuento promedio aplicado. |
 
-El informe delega la lógica de cálculo a las medidas guardadas en el modelo semántico; no se identificaron cálculos DAX independientes dentro de las definiciones de visual. La interpretación de cada medida, incluida la de crecimiento, devoluciones y ticket, está documentada en [`../Oro.SemanticModel/ARQUITECTURA_MODELO_SEMANTICO.md`](../Oro.SemanticModel/ARQUITECTURA_MODELO_SEMANTICO.md).
+El informe delega la lógica de cálculo a las medidas guardadas en el modelo semántico; no se identificaron cálculos DAX independientes dentro de las definiciones de visual. La interpretación de cada medida, incluida la de crecimiento, devoluciones y ticket, está documentada en [`../ARQUITECTURA_MODELO_SEMANTICO.md`](../ARQUITECTURA_MODELO_SEMANTICO.md).
 
 ## 7. Observaciones frente al contexto del proyecto
 
@@ -130,7 +130,7 @@ El contexto describe una vista ejecutiva y una vista de diagnóstico, y advierte
 4. Confirmar las interacciones cruzadas de los visuales y decidir si los segmentadores deben sincronizarse entre páginas.
 5. Probar en Power BI Desktop que el informe abra, que el modelo resuelva todas las medidas y campos, y que las cuatro páginas se puedan recorrer sin visuales con error.
 6. Probar un refresco real desde la fuente de SharePoint tras una publicación ETL, y verificar que el informe refleja la nueva versión.
-7. Validar visualmente formatos, unidades, moneda, orden de meses, escalas, filtros y legibilidad en la vista de 1280 × 720.
+7. Validar visualmente formatos, unidades, moneda, orden de meses, escalas, filtros y legibilidad en las páginas de 1280 × 720 y Panel de 1280 × 800.
 8. Comparar ventas netas, margen y porcentaje de margen del informe con la salida Oro y el reporte de calidad de la misma ejecución.
 
 ## 9. Evidencia y límites de esta revisión

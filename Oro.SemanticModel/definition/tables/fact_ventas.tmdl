@@ -123,6 +123,44 @@ table fact_ventas
 		displayFolder: Base
 		lineageTag: f7fd00e6-6ea6-4bde-8f81-e6b2815f954b
 
+	measure 'Ventas a pérdida' =
+			CALCULATE (
+				SUM ( fact_ventas[margen] ),
+				fact_ventas[margen] < 0
+			)
+		formatString: $#,##0.00;-$#,##0.00
+		displayFolder: KPIs
+		lineageTag: 79fbe452-1b9f-4f09-8279-e3932ff1307a
+
+	measure '% costo imputado' =
+			DIVIDE (
+				CALCULATE (
+					COUNTROWS ( fact_ventas ),
+					fact_ventas[costo_imputado] = 1
+				),
+				COUNTROWS ( fact_ventas )
+			)
+		formatString: 0.00%
+		displayFolder: KPIs
+		lineageTag: 9d8335a7-9176-443f-a61e-a6f6a3d9a28e
+
+	measure 'Descuento efectivo' = DIVIDE ( [Descuentos], [Ventas brutas] )
+		formatString: 0.00%
+		displayFolder: KPIs
+		lineageTag: 86a0feaa-b10c-4e37-bf67-adf70e0f2c4f
+
+	measure 'Clientes no identificados' =
+			DIVIDE (
+				CALCULATE (
+					COUNTROWS ( fact_ventas ),
+					fact_ventas[cliente_key] = 0
+				),
+				COUNTROWS ( fact_ventas )
+			)
+		formatString: 0.00%
+		displayFolder: KPIs
+		lineageTag: 7c7c1cdb-c399-481c-997f-88e64e77e16d
+
 	measure Unidades = SUM ( fact_ventas[cantidad] )
 		formatString: #,##0
 		displayFolder: Base
@@ -149,6 +187,8 @@ table fact_ventas
 		lineageTag: 0bd060fd-ca99-44f2-b518-f4cc88bd8379
 
 	column venta_id
+
+		isHidden
 		dataType: string
 		lineageTag: b1a5eb53-9651-40e6-a34c-35a499f6b4c9
 		summarizeBy: none
@@ -157,6 +197,8 @@ table fact_ventas
 		annotation SummarizationSetBy = Automatic
 
 	column fecha_key
+
+		isHidden
 		dataType: int64
 		formatString: 0
 		lineageTag: 74ae4369-e31f-4ffe-b6c7-ba006086ef77
@@ -166,6 +208,8 @@ table fact_ventas
 		annotation SummarizationSetBy = Automatic
 
 	column tienda_key
+
+		isHidden
 		dataType: int64
 		formatString: 0
 		lineageTag: 17cc6f74-3a75-41f6-8549-c913a066dbea
@@ -175,6 +219,8 @@ table fact_ventas
 		annotation SummarizationSetBy = Automatic
 
 	column producto_key
+
+		isHidden
 		dataType: int64
 		formatString: 0
 		lineageTag: d99348a7-140e-4bd3-810e-f661174035c6
@@ -184,6 +230,8 @@ table fact_ventas
 		annotation SummarizationSetBy = Automatic
 
 	column cliente_key
+
+		isHidden
 		dataType: int64
 		formatString: 0
 		lineageTag: ede74783-3c9c-42d9-8843-dcaad1ade00a
@@ -193,6 +241,8 @@ table fact_ventas
 		annotation SummarizationSetBy = Automatic
 
 	column promocion_key
+
+		isHidden
 		dataType: int64
 		formatString: 0
 		lineageTag: 79775395-4bd0-4071-9e39-ed81397eb618
@@ -202,6 +252,8 @@ table fact_ventas
 		annotation SummarizationSetBy = Automatic
 
 	column cantidad
+
+		isHidden
 		dataType: int64
 		formatString: 0
 		lineageTag: 2a2fb0f8-aa23-47b7-b5d4-dbf21e3885b2
@@ -211,6 +263,8 @@ table fact_ventas
 		annotation SummarizationSetBy = Automatic
 
 	column precio_unitario
+
+		isHidden
 		dataType: double
 		lineageTag: 478d7e31-3f4d-4900-98fd-30b276dd9705
 		summarizeBy: sum
@@ -221,6 +275,8 @@ table fact_ventas
 		annotation PBI_FormatHint = {"isGeneralNumber":true}
 
 	column descuento_pct
+
+		isHidden
 		dataType: double
 		lineageTag: 5b2470fe-179f-4145-9b1e-2766707cc1bb
 		summarizeBy: sum
@@ -231,6 +287,8 @@ table fact_ventas
 		annotation PBI_FormatHint = {"isGeneralNumber":true}
 
 	column costo_unitario
+
+		isHidden
 		dataType: double
 		lineageTag: 5fc185d4-2adf-4808-a3c9-f3a030acd542
 		summarizeBy: sum
@@ -241,6 +299,8 @@ table fact_ventas
 		annotation PBI_FormatHint = {"isGeneralNumber":true}
 
 	column importe_bruto
+
+		isHidden
 		dataType: double
 		lineageTag: b1cde2dc-38c6-41bb-b72b-cc17e7517ab9
 		summarizeBy: sum
@@ -251,6 +311,8 @@ table fact_ventas
 		annotation PBI_FormatHint = {"isGeneralNumber":true}
 
 	column importe_descuento
+
+		isHidden
 		dataType: double
 		lineageTag: d0597bdb-d7f2-4e84-b3c7-0400f65a0bf6
 		summarizeBy: sum
@@ -261,6 +323,8 @@ table fact_ventas
 		annotation PBI_FormatHint = {"isGeneralNumber":true}
 
 	column importe_neto
+
+		isHidden
 		dataType: double
 		lineageTag: 304388a0-0134-45b3-9cc9-139e45ded1ec
 		summarizeBy: sum
@@ -271,6 +335,8 @@ table fact_ventas
 		annotation PBI_FormatHint = {"isGeneralNumber":true}
 
 	column costo_total
+
+		isHidden
 		dataType: double
 		lineageTag: c46fec37-09c6-4fff-b00d-6c07c8d5e797
 		summarizeBy: sum
@@ -281,6 +347,8 @@ table fact_ventas
 		annotation PBI_FormatHint = {"isGeneralNumber":true}
 
 	column margen
+
+		isHidden
 		dataType: double
 		lineageTag: 85f3b7b2-e038-4f5d-bfbb-1fb0856886f2
 		summarizeBy: sum
@@ -291,6 +359,8 @@ table fact_ventas
 		annotation PBI_FormatHint = {"isGeneralNumber":true}
 
 	column es_devolucion
+
+		isHidden
 		dataType: int64
 		formatString: 0
 		lineageTag: 56258a09-3a42-45be-8feb-400044e20b31
@@ -300,6 +370,8 @@ table fact_ventas
 		annotation SummarizationSetBy = Automatic
 
 	column tiene_promocion
+
+		isHidden
 		dataType: int64
 		formatString: 0
 		lineageTag: f7adc318-f41d-4655-ad4e-b4abd5421575
@@ -309,6 +381,8 @@ table fact_ventas
 		annotation SummarizationSetBy = Automatic
 
 	column costo_imputado
+
+		isHidden
 		dataType: int64
 		formatString: 0
 		lineageTag: 3030e573-7f62-4bff-9360-ce63b6ff92c6
@@ -318,6 +392,7 @@ table fact_ventas
 		annotation SummarizationSetBy = Automatic
 
 	column medio_pago
+
 		dataType: string
 		lineageTag: 4db952fd-b25d-45da-af4b-77717da6b852
 		summarizeBy: none
@@ -326,6 +401,8 @@ table fact_ventas
 		annotation SummarizationSetBy = Automatic
 
 	column tipo_movimiento
+
+		isHidden
 		dataType: string
 		lineageTag: b21240ab-3c31-4300-9761-9883f2fbad32
 		summarizeBy: none
@@ -334,6 +411,8 @@ table fact_ventas
 		annotation SummarizationSetBy = Automatic
 
 	column fecha_hora
+
+		isHidden
 		dataType: dateTime
 		formatString: dd/mm/yyyy hh:mm:ss
 		lineageTag: 9a4f6c21-3d8b-4e2a-8f10-6c5b7d9e1a23
@@ -343,6 +422,8 @@ table fact_ventas
 		annotation SummarizationSetBy = Automatic
 
 	column hora
+
+		isHidden
 		dataType: int64
 		formatString: 0
 		lineageTag: 2e8d4b76-91a3-4f50-b6c7-d8e9a0f12345
@@ -365,4 +446,3 @@ table fact_ventas
 	annotation PBI_ResultType = Table
 
 	annotation PBI_NavigationStepName = Navegación
-

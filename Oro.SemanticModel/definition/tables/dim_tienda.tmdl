@@ -2,7 +2,10 @@ table dim_tienda
 	lineageTag: 50bcfc2c-8a05-4cfe-ac3a-381ffd1ab45a
 
 	column tienda_key
+
+		isHidden
 		dataType: int64
+		isKey
 		formatString: 0
 		lineageTag: 70711347-d283-4fd6-85a8-9aee0fe74357
 		summarizeBy: none
@@ -11,6 +14,8 @@ table dim_tienda
 		annotation SummarizationSetBy = Automatic
 
 	column tienda_id
+
+		isHidden
 		dataType: string
 		lineageTag: 8b0197d5-3964-4ffe-96a0-3bad41d35e5e
 		summarizeBy: none
@@ -19,6 +24,7 @@ table dim_tienda
 		annotation SummarizationSetBy = Automatic
 
 	column nombre_tienda
+
 		dataType: string
 		lineageTag: 35e3243f-68c3-44ad-ada1-1f1297c36d74
 		summarizeBy: none
@@ -27,22 +33,27 @@ table dim_tienda
 		annotation SummarizationSetBy = Automatic
 
 	column ciudad
+
 		dataType: string
 		lineageTag: f7c6164f-c266-4925-a128-8fb13427a61e
 		summarizeBy: none
 		sourceColumn: ciudad
+		dataCategory: City
 
 		annotation SummarizationSetBy = Automatic
 
 	column provincia
+
 		dataType: string
 		lineageTag: c70b69c5-59a6-46b7-8fa2-57559bf4d805
 		summarizeBy: none
 		sourceColumn: provincia
+		dataCategory: StateOrProvince
 
 		annotation SummarizationSetBy = Automatic
 
 	column formato
+
 		dataType: string
 		lineageTag: 63247c67-bb55-4db6-a9a9-d037334ec7e1
 		summarizeBy: none
@@ -51,22 +62,21 @@ table dim_tienda
 		annotation SummarizationSetBy = Automatic
 
 	column fecha_apertura
+
+		isHidden
 		dataType: dateTime
 		formatString: Long Date
 		lineageTag: 29cf5c41-043c-4d12-999a-36d78da14cee
 		summarizeBy: none
 		sourceColumn: fecha_apertura
 
-		variation Variation
-			isDefault
-			relationship: a05688b8-e53f-4beb-b170-e85636dfff5a
-			defaultHierarchy: LocalDateTable_da599da8-ebe5-4a99-8081-736b890b383f.'Jerarquía de fechas'
-
 		annotation SummarizationSetBy = Automatic
 
 		annotation UnderlyingDateTimeDataType = Date
 
 	column metros2
+
+		isHidden
 		dataType: int64
 		formatString: 0
 		lineageTag: 85ba83f2-2bc7-4dd9-953c-27bab5c7c950
@@ -74,6 +84,25 @@ table dim_tienda
 		sourceColumn: metros2
 
 		annotation SummarizationSetBy = Automatic
+
+	hierarchy 'Jerarquía de tiendas'
+		lineageTag: 45dd84df-b1ef-4d13-9a5f-e7d257995548
+
+		level Provincia
+			lineageTag: 4492e968-9d60-4c68-b61e-84da171d915c
+			column: provincia
+
+		level Ciudad
+			lineageTag: 919da1f5-56bc-45ac-ad5d-e4a61f49c748
+			column: ciudad
+
+		level Formato
+			lineageTag: e61a41c2-19c3-49a3-8026-57856a70ebc6
+			column: formato
+
+		level Tienda
+			lineageTag: 473ec26c-2f14-43db-a083-f00548297c0c
+			column: nombre_tienda
 
 	partition dim_tienda = m
 		mode: import
@@ -89,4 +118,3 @@ table dim_tienda
 	annotation PBI_ResultType = Table
 
 	annotation PBI_NavigationStepName = Navegación
-

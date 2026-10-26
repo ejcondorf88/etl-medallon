@@ -2,7 +2,10 @@ table dim_producto
 	lineageTag: f48ebce7-45af-4f09-893c-7e01cbfa8728
 
 	column producto_key
+
+		isHidden
 		dataType: int64
+		isKey
 		formatString: 0
 		lineageTag: 6c9b9b3b-e706-4f7e-835b-1b3099614ec4
 		summarizeBy: none
@@ -11,6 +14,8 @@ table dim_producto
 		annotation SummarizationSetBy = Automatic
 
 	column producto_id
+
+		isHidden
 		dataType: string
 		lineageTag: b2d8404a-4bd3-497e-a84f-b6faebe0a432
 		summarizeBy: none
@@ -19,6 +24,8 @@ table dim_producto
 		annotation SummarizationSetBy = Automatic
 
 	column sku
+
+		isHidden
 		dataType: string
 		lineageTag: bd71315f-74f5-48c2-a131-adb7a1e17cbb
 		summarizeBy: none
@@ -27,6 +34,7 @@ table dim_producto
 		annotation SummarizationSetBy = Automatic
 
 	column producto
+
 		dataType: string
 		lineageTag: 3bdb484d-6a41-473e-a9c9-3d295101edc1
 		summarizeBy: none
@@ -35,6 +43,7 @@ table dim_producto
 		annotation SummarizationSetBy = Automatic
 
 	column categoria
+
 		dataType: string
 		lineageTag: aa25db16-1d45-40ca-9252-9d41a4168543
 		summarizeBy: none
@@ -43,6 +52,7 @@ table dim_producto
 		annotation SummarizationSetBy = Automatic
 
 	column subcategoria
+
 		dataType: string
 		lineageTag: 58110a21-0c9b-49e0-b5f1-846cb056a9bc
 		summarizeBy: none
@@ -51,6 +61,7 @@ table dim_producto
 		annotation SummarizationSetBy = Automatic
 
 	column marca
+
 		dataType: string
 		lineageTag: 1382f8c6-0408-4a87-b23a-47c4db911c1a
 		summarizeBy: none
@@ -59,6 +70,7 @@ table dim_producto
 		annotation SummarizationSetBy = Automatic
 
 	column proveedor
+
 		dataType: string
 		lineageTag: 1131385b-72e6-4bd4-be56-1aa4f635b0d4
 		summarizeBy: none
@@ -67,6 +79,8 @@ table dim_producto
 		annotation SummarizationSetBy = Automatic
 
 	column costo_base
+
+		isHidden
 		dataType: double
 		lineageTag: 8d27095a-37fb-41f6-8b37-83e13d2d09f6
 		summarizeBy: none
@@ -77,6 +91,8 @@ table dim_producto
 		annotation PBI_FormatHint = {"isGeneralNumber":true}
 
 	column precio_lista
+
+		isHidden
 		dataType: double
 		lineageTag: 8a5c09f2-70cc-4be4-977a-cecf739407d3
 		summarizeBy: none
@@ -85,6 +101,25 @@ table dim_producto
 		annotation SummarizationSetBy = Automatic
 
 		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	hierarchy 'Jerarquía de productos'
+		lineageTag: d3a51131-094c-4565-8f08-4f171be44021
+
+		level Categoria
+			lineageTag: 111d47bf-b5c4-4edb-b123-74c76af6c7b1
+			column: categoria
+
+		level Subcategoria
+			lineageTag: 938b05ba-2f63-4ed2-b945-1dd6f7fd33c9
+			column: subcategoria
+
+		level Producto
+			lineageTag: 5907ccdf-e13b-432b-9cf5-99b3c7c6ed77
+			column: producto
+
+		level Marca
+			lineageTag: d835b4f3-87ad-4b5e-b97d-31b65e7cc684
+			column: marca
 
 	partition dim_producto = m
 		mode: import
@@ -97,5 +132,6 @@ table dim_producto
 				in
 				    #"Tipo cambiado"
 
-	annotation PBI_ResultType = Table
+	annotation PBI_NavigationStepName = Navegación
 
+	annotation PBI_ResultType = Table

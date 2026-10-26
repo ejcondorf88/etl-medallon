@@ -1,8 +1,12 @@
 table dim_fecha
+	dataCategory: Time
 	lineageTag: 5e8a1399-8473-4bbc-8887-ae2f0b317c0c
 
 	column fecha_key
+
+		isHidden
 		dataType: int64
+		isKey
 		formatString: 0
 		lineageTag: cb63e8ce-bfb8-45de-83f6-fd7c78481194
 		summarizeBy: none
@@ -11,31 +15,31 @@ table dim_fecha
 		annotation SummarizationSetBy = Automatic
 
 	column fecha
+
+		isHidden
 		dataType: dateTime
 		formatString: Long Date
 		lineageTag: 719d364b-b389-4f99-9892-492b06a8ffc8
 		summarizeBy: none
 		sourceColumn: fecha
 
-		variation Variation
-			isDefault
-			relationship: 52000be0-ae6e-4195-b800-4ab5c7df0e37
-			defaultHierarchy: LocalDateTable_c3c75b73-89be-468f-9d30-5a27149222ab.'Jerarquía de fechas'
-
 		annotation SummarizationSetBy = Automatic
 
 		annotation UnderlyingDateTimeDataType = Date
 
 	column anio
+
 		dataType: int64
 		formatString: 0
 		lineageTag: 93c923ef-3531-4b34-97c7-8500f41e8084
-		summarizeBy: sum
+		summarizeBy: none
 		sourceColumn: anio
 
 		annotation SummarizationSetBy = Automatic
 
 	column trimestre
+
+		isHidden
 		dataType: string
 		lineageTag: a05d393d-e64d-455a-83db-cac9dd705ad5
 		summarizeBy: none
@@ -44,23 +48,31 @@ table dim_fecha
 		annotation SummarizationSetBy = Automatic
 
 	column mes_num
+
+		isHidden
 		dataType: int64
+		isHidden
 		formatString: 0
 		lineageTag: d6ba3072-e0e7-49c3-982c-453dfb0f4008
-		summarizeBy: sum
+		summarizeBy: none
 		sourceColumn: mes_num
 
 		annotation SummarizationSetBy = Automatic
 
 	column mes
+
+		isHidden
 		dataType: string
 		lineageTag: 8fb9ecee-61f2-4255-a415-e35103ff63f6
 		summarizeBy: none
 		sourceColumn: mes
+		sortByColumn: mes_num
 
 		annotation SummarizationSetBy = Automatic
 
 	column mes_nombre
+
+		isHidden
 		dataType: string
 		lineageTag: 3c582e04-10cb-4096-b8d9-2a3ef5cc32f5
 		summarizeBy: none
@@ -69,55 +81,71 @@ table dim_fecha
 		annotation SummarizationSetBy = Automatic
 
 	column anio_mes
+
 		dataType: dateTime
-		formatString: Long Date
+		formatString: mmm, yyyy
 		lineageTag: 15c7ba7d-b0f7-47ad-8e30-84bf63a3f258
 		summarizeBy: none
 		sourceColumn: anio_mes
-
-		variation Variation
-			isDefault
-			relationship: 7638497e-6067-4b68-aa42-cfb7f0e9ff62
-			defaultHierarchy: LocalDateTable_5d277ea4-656e-40e5-b603-ced214ada08d.'Jerarquía de fechas'
 
 		annotation SummarizationSetBy = Automatic
 
 		annotation UnderlyingDateTimeDataType = Date
 
 	column dia
+
+		isHidden
 		dataType: int64
 		formatString: 0
 		lineageTag: 2e006b39-9f44-4978-b807-340237d2c41f
-		summarizeBy: sum
+		summarizeBy: none
 		sourceColumn: dia
 
 		annotation SummarizationSetBy = Automatic
 
 	column dia_semana_num
+
+		isHidden
 		dataType: int64
 		formatString: 0
 		lineageTag: e64f7bf1-72c4-4dea-8979-eba0f2420c3e
-		summarizeBy: sum
+		summarizeBy: none
 		sourceColumn: dia_semana_num
 
 		annotation SummarizationSetBy = Automatic
 
 	column dia_semana
+
+		isHidden
 		dataType: string
 		lineageTag: dc49579a-ed5a-457b-8064-3c93e4f1305e
 		summarizeBy: none
 		sourceColumn: dia_semana
+		sortByColumn: dia_semana_num
 
 		annotation SummarizationSetBy = Automatic
 
 	column es_fin_de_semana
+
+		isHidden
 		dataType: int64
 		formatString: 0
 		lineageTag: 7cbb8b00-ca72-4055-b846-82ec4e348b31
-		summarizeBy: sum
+		summarizeBy: none
 		sourceColumn: es_fin_de_semana
 
 		annotation SummarizationSetBy = Automatic
+
+	hierarchy 'Jerarquía de fechas'
+		lineageTag: 4715e8f8-68a6-4fcf-9861-25a828bed9fb
+
+		level Anio
+			lineageTag: 7417e7df-c7b4-488e-9ef4-8c4d1f8cae66
+			column: anio
+
+		level Mes
+			lineageTag: 2ad37029-7ad9-42c9-ad52-4c699f6540ac
+			column: mes
 
 	partition dim_fecha = m
 		mode: import
@@ -133,4 +161,3 @@ table dim_fecha
 	annotation PBI_ResultType = Table
 
 	annotation PBI_NavigationStepName = Navegación
-

@@ -2,7 +2,10 @@ table dim_promocion
 	lineageTag: 9dff20ea-db03-463e-a2df-fa5805ce70c4
 
 	column promocion_key
+
+		isHidden
 		dataType: int64
+		isKey
 		formatString: 0
 		lineageTag: 3f4eb035-fc03-4a34-9aca-9753b37480fd
 		summarizeBy: none
@@ -11,6 +14,8 @@ table dim_promocion
 		annotation SummarizationSetBy = Automatic
 
 	column promocion_id
+
+		isHidden
 		dataType: string
 		lineageTag: f61c8aa6-16bc-4787-a848-df560d6a8daf
 		summarizeBy: none
@@ -19,6 +24,7 @@ table dim_promocion
 		annotation SummarizationSetBy = Automatic
 
 	column nombre_promocion
+
 		dataType: string
 		lineageTag: 3afca5e1-fd4c-442f-a8ee-1567bba4af6a
 		summarizeBy: none
@@ -27,38 +33,33 @@ table dim_promocion
 		annotation SummarizationSetBy = Automatic
 
 	column fecha_inicio
+
+		isHidden
 		dataType: dateTime
 		formatString: Long Date
 		lineageTag: f570641d-5ae9-4221-bc18-a1c8014d1e41
 		summarizeBy: none
 		sourceColumn: fecha_inicio
 
-		variation Variation
-			isDefault
-			relationship: 37f3ae87-e370-4f9c-bbd7-93ee95dacc67
-			defaultHierarchy: LocalDateTable_27b41555-4852-4205-8a25-3e2f8bb039f8.'Jerarquía de fechas'
-
 		annotation SummarizationSetBy = Automatic
 
 		annotation UnderlyingDateTimeDataType = Date
 
 	column fecha_fin
+
+		isHidden
 		dataType: dateTime
 		formatString: Long Date
 		lineageTag: 82e5fac9-63b9-47d2-9fdc-e4fa3276188d
 		summarizeBy: none
 		sourceColumn: fecha_fin
 
-		variation Variation
-			isDefault
-			relationship: 81e0281d-4d2c-4c2a-9e6e-d171ed0fb76c
-			defaultHierarchy: LocalDateTable_68c68567-7e15-4dc8-bcb2-306d5ad09bf9.'Jerarquía de fechas'
-
 		annotation SummarizationSetBy = Automatic
 
 		annotation UnderlyingDateTimeDataType = Date
 
 	column tipo_promocion
+
 		dataType: string
 		lineageTag: e72f05b5-a0df-4a89-982d-19dda4968b05
 		summarizeBy: none
@@ -67,6 +68,8 @@ table dim_promocion
 		annotation SummarizationSetBy = Automatic
 
 	column descuento_objetivo
+
+		isHidden
 		dataType: double
 		lineageTag: e323a975-0b3f-4327-827f-44a5a6095b03
 		summarizeBy: sum
@@ -77,6 +80,7 @@ table dim_promocion
 		annotation PBI_FormatHint = {"isGeneralNumber":true}
 
 	column categoria_objetivo
+
 		dataType: string
 		lineageTag: f3bb5308-317b-44b5-8546-6ea5549f11d2
 		summarizeBy: none
@@ -98,4 +102,3 @@ table dim_promocion
 	annotation PBI_ResultType = Table
 
 	annotation PBI_NavigationStepName = Navegación
-
