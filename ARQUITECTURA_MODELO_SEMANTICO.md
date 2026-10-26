@@ -41,13 +41,12 @@ Por tanto, la ruta de lectura y la ruta de publicación no quedan conectadas aut
 | Archivo o ruta | Función |
 |---|---|
 | `definition.pbism` | Identifica el artefacto como un modelo semántico Power BI. |
-| `definition/model.tmdl` | Configuración del modelo, cultura `es-EC`, orden de consultas y referencias a las tablas. Tiene habilitada la inteligencia de tiempo automática. |
+| `definition/model.tmdl` | Configuración del modelo, cultura `es-EC`, orden de consultas y referencias a las tablas. La inteligencia de tiempo automática está deshabilitada; `dim_fecha` es la dimensión de fechas explícita. |
 | `definition/database.tmdl` | Nivel de compatibilidad del modelo. |
-| `definition/relationships.tmdl` | Relaciones entre la tabla de hechos y las dimensiones, además de relaciones automáticas con calendarios locales ocultos. |
+| `definition/relationships.tmdl` | Relaciones entre la tabla de hechos y las dimensiones del esquema estrella. |
 | `definition/tables/fact_ventas.tmdl` | Columnas y medidas DAX de ventas; partición Power Query del hecho. |
 | `definition/tables/dim_*.tmdl` | Columnas, tipos y particiones Power Query de las cinco dimensiones de negocio. |
-| `definition/tables/LocalDateTable_*.tmdl` | Tablas de fecha automáticas generadas para columnas con tipo fecha. No son sustituto de la dimensión de calendario del negocio. |
-| `definition/tables/DateTableTemplate_*.tmdl` | Plantilla interna para fechas de Power BI. |
+| `definition/tables/dim_fecha.tmdl` | Calendario de negocio marcado como `Time`, con clave, ordenación cronológica y jerarquía explícita. |
 | `diagramLayout.json` | Posición visual de tablas en el diagrama del modelo; no define la lógica de negocio. |
 
 Las tablas de negocio usan particiones `mode: import`. Cada partición abre el libro Excel de SharePoint, selecciona la hoja con el nombre de la tabla, promueve la primera fila como encabezado y asigna tipos en Power Query.
@@ -90,6 +89,10 @@ Como las devoluciones tienen cantidad negativa, sus cantidades e importes reduce
 
 El ETL genera llaves sustitutas enteras ordenando las llaves naturales. Las claves `0` de cliente y promoción permiten representar una venta anónima o sin campaña asociada.
 
+Las cinco dimensiones tienen marcada su clave sustituta con `isKey`. `dim_producto` expone la jerarquía Categoría → Subcategoría → Producto → Marca, y `dim_tienda` Provincia → Ciudad → Formato → Tienda. Provincia y ciudad tienen categorías geográficas `StateOrProvince` y `City`, respectivamente; la geocodificación de mapas aún depende de la calidad y desambiguación de esos nombres.
+
+El informe referencia 17 columnas de negocio. Se marcan como ocultas 50 columnas que no aparecen en esos visuales y una clave técnica (`dim_promocion.promocion_key`) que sí se utiliza como campo en el informe; ocultarla del panel de campos no elimina ni altera el campo ya guardado en el visual.
+
 ### Relaciones
 
 La intención del modelo es una relación muchos-a-uno desde `fact_ventas` hacia cada dimensión:
@@ -104,7 +107,7 @@ dim_promocion  1 ── * fact_ventas
 
 Las cinco relaciones se basan en las llaves sustitutas correspondientes. Las dimensiones filtran las filas del hecho para analizar ventas por tiempo, tienda, producto, cliente y promoción. Las relaciones aparecen en `relationships.tmdl`, varias con identificadores `AutoDetected_*`; la definición no consigna explícitamente en ese archivo la cardinalidad, dirección de filtro ni estado activo. Se debe confirmar en Power BI que estén activas, con filtro unidireccional desde cada dimensión hacia el hecho, tal como establece la especificación del proyecto.
 
-El mismo archivo contiene relaciones auxiliares entre columnas de fecha de las dimensiones y seis `LocalDateTable`. Son calendarios automáticos de Power BI, independientes de las cinco relaciones del esquema estrella. En la dimensión calendario principal no se encontró una declaración explícita de tabla de fechas ni ordenación de los nombres de mes y día de semana por sus columnas numéricas.
+La inteligencia de tiempo automática está deshabilitada. Se retiraron del proyecto las seis tablas `LocalDateTable` y la plantilla interna, junto con sus relaciones y variaciones; el informe no referenciaba esas jerarquías. `dim_fecha` queda como calendario explícito con los nombres de mes y día de semana ordenados por sus ordinales.
 
 ## 5. Capa semántica y medidas DAX implementadas
 
@@ -126,6 +129,10 @@ Las medidas están declaradas dentro de `fact_ventas.tmdl` y organizadas en las 
 | `Crecimiento` | `([Ventas YTD] - [Ventas año anterior]) / [Ventas año anterior]` | Crecimiento YTD interanual bajo el contexto actual. |
 | `Coste` | `SUM(fact_ventas[costo_total])` | Costo agregado de las líneas. |
 | `Descuentos` | `SUM(fact_ventas[importe_descuento])` | Importe de descuento calculado por ETL. |
+| `Ventas a pérdida` | Suma de `margen` para líneas cuyo margen es negativo | Expone el valor acumulado de líneas con pérdida; el conteo y el importe de referencia dependen del bundle Oro. |
+| `% costo imputado` | Líneas con `costo_imputado = 1` / líneas totales | Porcentaje de líneas cuyo costo fue completado por el ETL. |
+| `Descuento efectivo` | `[Descuentos] / [Ventas brutas]` | Tasa monetaria agregada respecto del importe bruto. |
+| `Clientes no identificados` | Líneas con `cliente_key = 0` / líneas totales | Porcentaje de líneas atribuidas al miembro de cliente desconocido; no es porcentaje de personas únicas. |
 | `Unidades` | `SUM(fact_ventas[cantidad])` | Unidades netas: las devoluciones restan por tener cantidad negativa. |
 | `Clientes con compra` | Recuento distinto de `cliente_key`, excluyendo la clave `0` | Excluye las ventas anónimas del conteo. |
 | `Descuento medio` | `AVERAGE(fact_ventas[descuento_pct])` | Promedio aritmético por línea; no pondera por valor de venta. |
@@ -165,7 +172,7 @@ El contexto adjunto, sin embargo, describe el dashboard como pendiente y solicit
 5. **Descuentos:** aclarar si el KPI es promedio aritmético por línea o descuento efectivo ponderado por importe; las dos medidas actuales son promedios simples.
 6. **Crecimiento:** escoger entre el KPI fijo Ene-Jun 2026 vs Ene-Jun 2025 especificado en el contexto y el crecimiento YTD dinámico implementado.
 7. **Ventas por m²:** acordar si el denominador debe ser la suma de superficie de todas las tiendas visibles o productividad por tienda/formato. La medida actual suma `metros2` en el contexto visible.
-8. **Calendario:** marcar `dim_fecha` como tabla de fechas, ordenar mes y día de semana por sus ordinales y evitar depender de calendarios automáticos adicionales para inteligencia de tiempo.
+8. **Calendario:** `dim_fecha` está marcada como `Time`; mes y día de semana se ordenan por sus ordinales y la inteligencia de tiempo automática está deshabilitada.
 9. **Tipos y agregación:** `dim_tienda[metros2]` es entero y resumible por suma en TMDL, aunque el ETL admite superficie numérica; `anio`, `mes_num`, `dia`, `dia_semana_num` y otros indicadores de fecha también aparecen con agregación `sum`. Configurar agregación no resumible para atributos descriptivos/ordinales, excepto donde una suma sea intencional.
 10. **Corte temporal:** documentar que las medidas YTD calculan la fecha máxima a partir del contexto filtrado o decidir si el negocio requiere un corte común global.
 
@@ -176,11 +183,13 @@ Estos puntos describen diferencias entre especificación y archivos revisados; n
 - La fuente de verdad financiera es el cálculo Oro del ETL; las medidas DAX agregan esos importes en lugar de volver a calcular precios, descuentos o costos por separado.
 - Las columnas de fecha, llaves y atributos dimensionales conectan el análisis con las tablas Oro. Para explicar un resultado de negocio hasta el dato original, debe conservarse la trazabilidad del ETL y de sus reglas y controles.
 - El contexto del proyecto reporta como cifras de referencia del modelo ya calculado: ventas netas **$185.510,71**, costo total **$134.278,67**, margen **$51.232,04** y margen porcentual **27,62 %**. Son cifras de referencia aportadas por el contexto, no recalculadas durante esta revisión del modelo semántico; antes de presentarlas, deben contrastarse con la salida Oro y el reporte de calidad de la ejecución correspondiente.
-- El contexto informa 75 costos unitarios imputados con costo base de producto (0,42 % de las líneas). El indicador `costo_imputado` está presente en el hecho; el modelo actual no define una medida DAX dedicada para exponer ese porcentaje.
+- El contexto informa 75 costos unitarios imputados con costo base de producto (0,42 % de las líneas). La medida `% costo imputado` ahora expone el porcentaje; la cifra y el conteo deben validarse con el bundle Oro correspondiente.
 - No hay identificador de ticket y, por tanto, el modelo no permite estudiar composición de cesta ni calcular un valor medio por compra.
 - La solución es una prueba de concepto basada en archivos CSV/XLSX y Power BI; el repositorio no acredita un almacén analítico, carga incremental, RLS ni operación productiva.
 
 ## 10. Archivos relacionados
+
+El modelo aplica `valueFilterBehavior: independent` para fijar explícitamente el comportamiento previsto de filtros de varias columnas. La configuración del editor Power BI `Oro.SemanticModel/.pbi/editorSettings.json` se mantiene versionada en Git.
 
 - Transformación y generación del modelo Oro: `andinos_etl/oro.py`.
 - Reglas de limpieza y deduplicación de ventas: `andinos_etl/plata.py`.
