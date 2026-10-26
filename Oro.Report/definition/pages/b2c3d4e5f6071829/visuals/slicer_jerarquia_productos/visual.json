@@ -1,12 +1,12 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
-  "name": "slicer_ciudad_t",
+  "name": "slicer_jerarquia_productos",
   "position": {
     "x": 24,
     "y": 136,
     "z": 3000,
     "height": 76,
-    "width": 192,
+    "width": 400,
     "tabOrder": 3000
   },
   "visual": {
@@ -20,14 +20,59 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "dim_tienda"
+                      "Entity": "dim_producto"
                     }
                   },
-                  "Property": "ciudad"
+                  "Property": "categoria"
                 }
               },
-              "queryRef": "dim_tienda.ciudad",
-              "nativeQueryRef": "ciudad",
+              "queryRef": "dim_producto.categoria",
+              "nativeQueryRef": "categoria",
+              "active": true
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_producto"
+                    }
+                  },
+                  "Property": "subcategoria"
+                }
+              },
+              "queryRef": "dim_producto.subcategoria",
+              "nativeQueryRef": "subcategoria",
+              "active": true
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_producto"
+                    }
+                  },
+                  "Property": "producto"
+                }
+              },
+              "queryRef": "dim_producto.producto",
+              "nativeQueryRef": "producto",
+              "active": true
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_producto"
+                    }
+                  },
+                  "Property": "marca"
+                }
+              },
+              "queryRef": "dim_producto.marca",
+              "nativeQueryRef": "marca",
               "active": true
             }
           ]

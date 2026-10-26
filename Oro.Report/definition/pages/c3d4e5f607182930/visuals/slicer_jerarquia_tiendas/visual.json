@@ -1,12 +1,12 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
-  "name": "slicer_marca_p",
+  "name": "slicer_jerarquia_tiendas",
   "position": {
-    "x": 440,
+    "x": 24,
     "y": 136,
     "z": 5000,
     "height": 76,
-    "width": 192,
+    "width": 400,
     "tabOrder": 5000
   },
   "visual": {
@@ -20,14 +20,59 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "dim_producto"
+                      "Entity": "dim_tienda"
                     }
                   },
-                  "Property": "marca"
+                  "Property": "provincia"
                 }
               },
-              "queryRef": "dim_producto.marca",
-              "nativeQueryRef": "marca",
+              "queryRef": "dim_tienda.provincia",
+              "nativeQueryRef": "provincia",
+              "active": true
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_tienda"
+                    }
+                  },
+                  "Property": "ciudad"
+                }
+              },
+              "queryRef": "dim_tienda.ciudad",
+              "nativeQueryRef": "ciudad",
+              "active": true
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_tienda"
+                    }
+                  },
+                  "Property": "formato"
+                }
+              },
+              "queryRef": "dim_tienda.formato",
+              "nativeQueryRef": "formato",
+              "active": true
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_tienda"
+                    }
+                  },
+                  "Property": "nombre_tienda"
+                }
+              },
+              "queryRef": "dim_tienda.nombre_tienda",
+              "nativeQueryRef": "nombre_tienda",
               "active": true
             }
           ]

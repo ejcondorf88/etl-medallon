@@ -56,7 +56,7 @@ Los identificadores largos de carpeta de página son identificadores internos. L
 
 ## 4. Estructura y páginas
 
-Las páginas tienen modo de ajuste **FitToPage**. Panel usa un lienzo de **1280 × 800** para acomodar dos filas de indicadores; las otras tres páginas conservan **1280 × 720**. En las definiciones se cuentan **69 visuales**: 27 en Panel, 15 en Productos, 14 en Tiendas y 13 en Promociones. Los conteos incluyen tarjetas, segmentadores, gráficos, tablas/matrices y cuadros de texto decorativos.
+Las páginas tienen modo de ajuste **FitToPage**. Panel usa un lienzo de **1280 × 800** para acomodar dos filas de indicadores; las otras tres páginas conservan **1280 × 720**. En las definiciones se cuentan **65 visuales**: 27 en Panel, 13 en Productos, 12 en Tiendas y 13 en Promociones. Los conteos incluyen tarjetas, segmentadores, gráficos, tablas/matrices y cuadros de texto decorativos.
 
 ### Panel — resumen ejecutivo
 
@@ -72,11 +72,11 @@ Es la página más cercana a una vista ejecutiva, aunque la tarjeta de ticket pr
 
 ### Productos — diagnóstico de surtido
 
-Incluye ventas netas, crecimiento, descuento medio, unidades y porcentaje de margen. Los gráficos comparan ventas por marca y subcategoría; una matriz presenta ventas, margen, porcentaje de margen y unidades por producto. Los segmentadores permiten filtrar categoría, subcategoría, marca y proveedor.
+Incluye ventas netas, crecimiento, descuento medio, unidades y porcentaje de margen. Los gráficos comparan ventas por marca y subcategoría; una matriz presenta ventas, margen, porcentaje de margen y unidades por producto. Los filtros se reducen a un segmentador jerárquico Categoría → Subcategoría → Producto → Marca y un segmentador independiente de proveedor.
 
 ### Tiendas — diagnóstico de ubicaciones
 
-Incluye ventas netas, margen, porcentaje de margen, ventas por metro cuadrado y otra tarjeta llamada **Ticket promedio**. Presenta ventas por ciudad y formato, además de una matriz de desempeño por tienda. Los segmentadores son ciudad, formato y provincia.
+Incluye ventas netas, margen, porcentaje de margen, ventas por metro cuadrado y otra tarjeta llamada **Ticket promedio**. Presenta ventas por ciudad y formato, además de una matriz de desempeño por tienda. Un segmentador jerárquico reúne Provincia → Ciudad → Formato → Tienda.
 
 ### Promociones — diagnóstico de campañas
 
@@ -85,6 +85,7 @@ Incluye ventas netas, clientes con compra, transacciones, porcentaje con promoci
 ## 5. Interacción y presentación
 
 - Los segmentadores están definidos como visuales en las páginas, por lo que el usuario puede filtrar los análisis por las categorías expuestas en cada una.
+- Las páginas Productos y Tiendas agrupan sus filtros dimensionales en segmentadores jerárquicos; en conjunto, el informe pasa de 15 a 11 segmentadores.
 - Las definiciones de visual incluyen `drillFilterOtherVisuals: true`, configuración asociada a la propagación de selección o filtrado entre visuales.
 - No se encontró configuración de grupos de sincronización de segmentadores. Por ello, no se debe asumir que un filtro seleccionado en una página se conserva al navegar a otra; la interacción debe verificarse en Power BI.
 - El tema `Oro` usa una paleta que incluye dorado `#D4AF37`, azul petróleo `#0E7490`, azul `#1D4ED8`, rojo `#BE123C` y otros colores de serie. El texto principal usa azul marino `#0B1F3A`.
@@ -100,8 +101,8 @@ Los visuales usan campos de las dimensiones para agrupar y segmentar y medidas d
 | Página | Atributos usados | Medidas utilizadas |
 |---|---|---|
 | Panel | `dim_fecha[anio_mes]`, `dim_fecha[anio]`, `dim_producto[categoria]`, `dim_producto[producto]`, `dim_tienda[ciudad]`, `dim_tienda[formato]`, `dim_cliente[segmento]`, `fact_ventas[medio_pago]` | Ventas netas, margen bruto, porcentaje de margen, crecimiento, porcentaje de devoluciones, ticket promedio, coste, descuentos, ventas brutas, ventas a pérdida, porcentaje de costo imputado, descuento efectivo y clientes no identificados. |
-| Productos | `dim_producto[categoria]`, `subcategoria`, `marca`, `proveedor` y `producto` | Ventas netas, margen bruto, porcentaje de margen, unidades, crecimiento y descuento medio. |
-| Tiendas | `dim_tienda[ciudad]`, `formato`, `provincia` y `nombre_tienda` | Ventas netas, margen bruto, porcentaje de margen, ventas por m² y ticket promedio. |
+| Productos | Jerarquía Categoría → Subcategoría → Producto → Marca y `dim_producto[proveedor]` | Ventas netas, margen bruto, porcentaje de margen, unidades, crecimiento y descuento medio. |
+| Tiendas | Jerarquía Provincia → Ciudad → Formato → Tienda | Ventas netas, margen bruto, porcentaje de margen, ventas por m² y ticket promedio. |
 | Promociones | `dim_promocion[categoria_objetivo]`, `tipo_promocion` y `nombre_promocion` | Ventas netas, unidades, margen porcentual, clientes con compra, transacciones, porcentaje con promoción y descuento promedio aplicado. |
 
 El informe delega la lógica de cálculo a las medidas guardadas en el modelo semántico; no se identificaron cálculos DAX independientes dentro de las definiciones de visual. La interpretación de cada medida, incluida la de crecimiento, devoluciones y ticket, está documentada en [`../ARQUITECTURA_MODELO_SEMANTICO.md`](../ARQUITECTURA_MODELO_SEMANTICO.md).
