@@ -1,0 +1,92 @@
+table dim_tienda
+	lineageTag: 50bcfc2c-8a05-4cfe-ac3a-381ffd1ab45a
+
+	column tienda_key
+		dataType: int64
+		formatString: 0
+		lineageTag: 70711347-d283-4fd6-85a8-9aee0fe74357
+		summarizeBy: none
+		sourceColumn: tienda_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column tienda_id
+		dataType: string
+		lineageTag: 8b0197d5-3964-4ffe-96a0-3bad41d35e5e
+		summarizeBy: none
+		sourceColumn: tienda_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column nombre_tienda
+		dataType: string
+		lineageTag: 35e3243f-68c3-44ad-ada1-1f1297c36d74
+		summarizeBy: none
+		sourceColumn: nombre_tienda
+
+		annotation SummarizationSetBy = Automatic
+
+	column ciudad
+		dataType: string
+		lineageTag: f7c6164f-c266-4925-a128-8fb13427a61e
+		summarizeBy: none
+		sourceColumn: ciudad
+
+		annotation SummarizationSetBy = Automatic
+
+	column provincia
+		dataType: string
+		lineageTag: c70b69c5-59a6-46b7-8fa2-57559bf4d805
+		summarizeBy: none
+		sourceColumn: provincia
+
+		annotation SummarizationSetBy = Automatic
+
+	column formato
+		dataType: string
+		lineageTag: 63247c67-bb55-4db6-a9a9-d037334ec7e1
+		summarizeBy: none
+		sourceColumn: formato
+
+		annotation SummarizationSetBy = Automatic
+
+	column fecha_apertura
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 29cf5c41-043c-4d12-999a-36d78da14cee
+		summarizeBy: none
+		sourceColumn: fecha_apertura
+
+		variation Variation
+			isDefault
+			relationship: a05688b8-e53f-4beb-b170-e85636dfff5a
+			defaultHierarchy: LocalDateTable_da599da8-ebe5-4a99-8081-736b890b383f.'Jerarquía de fechas'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column metros2
+		dataType: int64
+		formatString: 0
+		lineageTag: 85ba83f2-2bc7-4dd9-953c-27bab5c7c950
+		summarizeBy: sum
+		sourceColumn: metros2
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_tienda = m
+		mode: import
+		source =
+				let
+				    Origen = Excel.Workbook(Web.Contents("https://uceedu.sharepoint.com/sites/POC/Documentos%20compartidos/General/modelo_estrella.xlsx"), null, true),
+				    dim_tienda_Sheet = Origen{[Item="dim_tienda",Kind="Sheet"]}[Data],
+				    #"Encabezados promovidos" = Table.PromoteHeaders(dim_tienda_Sheet, [PromoteAllScalars=true]),
+				    #"Tipo cambiado" = Table.TransformColumnTypes(#"Encabezados promovidos",{{"tienda_key", Int64.Type}, {"tienda_id", type text}, {"nombre_tienda", type text}, {"ciudad", type text}, {"provincia", type text}, {"formato", type text}, {"fecha_apertura", type date}, {"metros2", Int64.Type}})
+				in
+				    #"Tipo cambiado"
+
+	annotation PBI_ResultType = Table
+
+	annotation PBI_NavigationStepName = Navegación
+

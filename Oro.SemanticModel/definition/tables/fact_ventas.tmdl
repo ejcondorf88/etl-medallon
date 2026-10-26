@@ -1,0 +1,368 @@
+table fact_ventas
+	lineageTag: f57e3a36-1b57-4dca-8b81-56a77c38a93e
+
+	measure 'Ventas netas' = SUM ( fact_ventas[importe_neto] )
+		formatString: $#,##0.00
+		displayFolder: KPIs
+		lineageTag: 0e8ff823-6cf8-47fc-b47b-0de96e1a15bf
+
+	measure 'Ventas brutas' = SUM ( fact_ventas[importe_bruto] )
+		formatString: $#,##0.00
+		displayFolder: KPIs
+		lineageTag: 0bd17325-4a26-40c7-89bf-a4b441949590
+
+	measure 'Margen bruto' = SUM ( fact_ventas[margen] )
+		formatString: $#,##0.00
+		displayFolder: KPIs
+		lineageTag: ebefe736-e2a5-4db3-8031-54e3693635ce
+
+	measure '% de margen' = DIVIDE ( [Margen bruto], [Ventas netas] )
+		formatString: 0.0%
+		displayFolder: KPIs
+		lineageTag: 27dc615f-698a-4f51-88b5-3f8497f44fcf
+
+	measure 'Ticket promedio' = DIVIDE ( [Ventas netas], [Transacciones] )
+		formatString: $#,##0.00
+		displayFolder: KPIs
+		lineageTag: f12fa200-031f-48b1-b5b7-3b87ff817444
+
+	measure '% de devoluciones' =
+			DIVIDE (
+				ABS ( CALCULATE ( [Ventas netas], fact_ventas[es_devolucion] = 1 ) ),
+				CALCULATE ( [Ventas netas], fact_ventas[es_devolucion] = 0 )
+			)
+		formatString: 0.0%
+		displayFolder: KPIs
+		lineageTag: f4010aeb-ebfe-4fff-8088-90b488acfeea
+
+	measure '% con promoción' = DIVIDE ( CALCULATE ( [Ventas netas], fact_ventas[tiene_promocion] = 1 ), [Ventas netas] )
+		formatString: 0.0%
+		displayFolder: KPIs
+		lineageTag: bf7f2328-dbd2-4883-889a-043621b6bc4c
+
+	measure 'Ventas por m2' = DIVIDE ( [Ventas netas], SUM ( dim_tienda[metros2] ) )
+		formatString: $#,##0.00
+		displayFolder: KPIs
+		lineageTag: dd6562d1-4960-4609-9175-a87dc1930ba9
+
+	measure 'Ventas YTD' =
+			VAR UltimoHecho =
+				IF (
+					ISBLANK ( MAX ( fact_ventas[fecha_hora] ) ),
+					BLANK (),
+					DATE (
+						YEAR ( MAX ( fact_ventas[fecha_hora] ) ),
+						MONTH ( MAX ( fact_ventas[fecha_hora] ) ),
+						DAY ( MAX ( fact_ventas[fecha_hora] ) )
+					)
+				)
+			VAR AnioActual = YEAR ( UltimoHecho )
+			RETURN
+				IF (
+					ISBLANK ( UltimoHecho ),
+					BLANK (),
+					CALCULATE (
+						[Ventas netas],
+						FILTER (
+							ALL ( dim_fecha ),
+							dim_fecha[anio] = AnioActual
+								&& dim_fecha[fecha] <= UltimoHecho
+						)
+					)
+				)
+		formatString: $#,##0.00
+		displayFolder: Time Intelligence
+		lineageTag: 5d1c9a44-0e6b-4f2a-9f3d-2b7c8e1a4f52
+
+	measure 'Ventas año anterior' =
+			VAR UltimoHecho =
+				IF (
+					ISBLANK ( MAX ( fact_ventas[fecha_hora] ) ),
+					BLANK (),
+					DATE (
+						YEAR ( MAX ( fact_ventas[fecha_hora] ) ),
+						MONTH ( MAX ( fact_ventas[fecha_hora] ) ),
+						DAY ( MAX ( fact_ventas[fecha_hora] ) )
+					)
+				)
+			VAR AnioObjetivo = YEAR ( UltimoHecho ) - 1
+			VAR MismoPeriodo =
+				FILTER (
+					ALL ( dim_fecha ),
+					dim_fecha[anio] = AnioObjetivo
+						&& dim_fecha[fecha]
+							<= DATE ( AnioObjetivo, MONTH ( UltimoHecho ), DAY ( UltimoHecho ) )
+				)
+			RETURN
+				IF (
+					ISBLANK ( UltimoHecho ),
+					BLANK (),
+					CALCULATE ( [Ventas netas], MismoPeriodo )
+				)
+		formatString: $#,##0.00
+		displayFolder: Time Intelligence
+		lineageTag: 907fbed0-4626-4be0-9069-efc3efd8b4b0
+
+	measure Crecimiento =
+			DIVIDE (
+				[Ventas YTD] - [Ventas año anterior],
+				[Ventas año anterior],
+				BLANK ( )
+			)
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: KPIs
+		lineageTag: 7e213c05-b27b-4e0d-a8bf-f54e268bd3f3
+
+	measure Coste = SUM ( fact_ventas[costo_total] )
+		formatString: $#,##0.00
+		displayFolder: Base
+		lineageTag: 0d4dc214-a44a-4baf-9b7a-c863a8b807f1
+
+	measure Descuentos = SUM ( fact_ventas[importe_descuento] )
+		formatString: $#,##0.00
+		displayFolder: Base
+		lineageTag: f7fd00e6-6ea6-4bde-8f81-e6b2815f954b
+
+	measure Unidades = SUM ( fact_ventas[cantidad] )
+		formatString: #,##0
+		displayFolder: Base
+		lineageTag: 3a7c6027-e446-462a-8413-4f38f72e9431
+
+	measure Transacciones = DISTINCTCOUNT ( fact_ventas[venta_id] )
+		formatString: #,##0
+		displayFolder: Base
+		lineageTag: c477d992-fb82-46ef-a9ca-cb6022ead586
+
+	measure 'Clientes con compra' = CALCULATE ( DISTINCTCOUNT ( fact_ventas[cliente_key] ), fact_ventas[cliente_key] <> 0 )
+		formatString: #,##0
+		displayFolder: Base
+		lineageTag: 1c8d3d8e-e81c-48db-8012-160d19120277
+
+	measure 'Descuento medio' = AVERAGE ( fact_ventas[descuento_pct] )
+		formatString: 0.0%
+		displayFolder: Base
+		lineageTag: 119dac8b-4061-4eaa-9845-47eb5324026f
+
+	measure 'Descuento promedio aplicado' = CALCULATE ( AVERAGE ( fact_ventas[descuento_pct] ), fact_ventas[tiene_promocion] = 1 )
+		formatString: 0.0%
+		displayFolder: Base
+		lineageTag: 0bd060fd-ca99-44f2-b518-f4cc88bd8379
+
+	column venta_id
+		dataType: string
+		lineageTag: b1a5eb53-9651-40e6-a34c-35a499f6b4c9
+		summarizeBy: none
+		sourceColumn: venta_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column fecha_key
+		dataType: int64
+		formatString: 0
+		lineageTag: 74ae4369-e31f-4ffe-b6c7-ba006086ef77
+		summarizeBy: none
+		sourceColumn: fecha_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column tienda_key
+		dataType: int64
+		formatString: 0
+		lineageTag: 17cc6f74-3a75-41f6-8549-c913a066dbea
+		summarizeBy: none
+		sourceColumn: tienda_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column producto_key
+		dataType: int64
+		formatString: 0
+		lineageTag: d99348a7-140e-4bd3-810e-f661174035c6
+		summarizeBy: none
+		sourceColumn: producto_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column cliente_key
+		dataType: int64
+		formatString: 0
+		lineageTag: ede74783-3c9c-42d9-8843-dcaad1ade00a
+		summarizeBy: none
+		sourceColumn: cliente_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column promocion_key
+		dataType: int64
+		formatString: 0
+		lineageTag: 79775395-4bd0-4071-9e39-ed81397eb618
+		summarizeBy: none
+		sourceColumn: promocion_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column cantidad
+		dataType: int64
+		formatString: 0
+		lineageTag: 2a2fb0f8-aa23-47b7-b5d4-dbf21e3885b2
+		summarizeBy: sum
+		sourceColumn: cantidad
+
+		annotation SummarizationSetBy = Automatic
+
+	column precio_unitario
+		dataType: double
+		lineageTag: 478d7e31-3f4d-4900-98fd-30b276dd9705
+		summarizeBy: sum
+		sourceColumn: precio_unitario
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column descuento_pct
+		dataType: double
+		lineageTag: 5b2470fe-179f-4145-9b1e-2766707cc1bb
+		summarizeBy: sum
+		sourceColumn: descuento_pct
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column costo_unitario
+		dataType: double
+		lineageTag: 5fc185d4-2adf-4808-a3c9-f3a030acd542
+		summarizeBy: sum
+		sourceColumn: costo_unitario
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column importe_bruto
+		dataType: double
+		lineageTag: b1cde2dc-38c6-41bb-b72b-cc17e7517ab9
+		summarizeBy: sum
+		sourceColumn: importe_bruto
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column importe_descuento
+		dataType: double
+		lineageTag: d0597bdb-d7f2-4e84-b3c7-0400f65a0bf6
+		summarizeBy: sum
+		sourceColumn: importe_descuento
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column importe_neto
+		dataType: double
+		lineageTag: 304388a0-0134-45b3-9cc9-139e45ded1ec
+		summarizeBy: sum
+		sourceColumn: importe_neto
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column costo_total
+		dataType: double
+		lineageTag: c46fec37-09c6-4fff-b00d-6c07c8d5e797
+		summarizeBy: sum
+		sourceColumn: costo_total
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column margen
+		dataType: double
+		lineageTag: 85f3b7b2-e038-4f5d-bfbb-1fb0856886f2
+		summarizeBy: sum
+		sourceColumn: margen
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column es_devolucion
+		dataType: int64
+		formatString: 0
+		lineageTag: 56258a09-3a42-45be-8feb-400044e20b31
+		summarizeBy: sum
+		sourceColumn: es_devolucion
+
+		annotation SummarizationSetBy = Automatic
+
+	column tiene_promocion
+		dataType: int64
+		formatString: 0
+		lineageTag: f7adc318-f41d-4655-ad4e-b4abd5421575
+		summarizeBy: sum
+		sourceColumn: tiene_promocion
+
+		annotation SummarizationSetBy = Automatic
+
+	column costo_imputado
+		dataType: int64
+		formatString: 0
+		lineageTag: 3030e573-7f62-4bff-9360-ce63b6ff92c6
+		summarizeBy: sum
+		sourceColumn: costo_imputado
+
+		annotation SummarizationSetBy = Automatic
+
+	column medio_pago
+		dataType: string
+		lineageTag: 4db952fd-b25d-45da-af4b-77717da6b852
+		summarizeBy: none
+		sourceColumn: medio_pago
+
+		annotation SummarizationSetBy = Automatic
+
+	column tipo_movimiento
+		dataType: string
+		lineageTag: b21240ab-3c31-4300-9761-9883f2fbad32
+		summarizeBy: none
+		sourceColumn: tipo_movimiento
+
+		annotation SummarizationSetBy = Automatic
+
+	column fecha_hora
+		dataType: dateTime
+		formatString: dd/mm/yyyy hh:mm:ss
+		lineageTag: 9a4f6c21-3d8b-4e2a-8f10-6c5b7d9e1a23
+		summarizeBy: none
+		sourceColumn: fecha_hora
+
+		annotation SummarizationSetBy = Automatic
+
+	column hora
+		dataType: int64
+		formatString: 0
+		lineageTag: 2e8d4b76-91a3-4f50-b6c7-d8e9a0f12345
+		summarizeBy: none
+		sourceColumn: hora
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_ventas = m
+		mode: import
+		source =
+				let
+				    Origen = Excel.Workbook(Web.Contents("https://uceedu.sharepoint.com/sites/POC/Documentos%20compartidos/General/modelo_estrella.xlsx"), null, true),
+				    fact_ventas_Sheet = Origen{[Item="fact_ventas",Kind="Sheet"]}[Data],
+				    #"Encabezados promovidos" = Table.PromoteHeaders(fact_ventas_Sheet, [PromoteAllScalars=true]),
+				    #"Tipo cambiado" = Table.TransformColumnTypes(#"Encabezados promovidos",{{"venta_id", type text}, {"fecha_hora", type datetime}, {"hora", Int64.Type}, {"fecha_key", Int64.Type}, {"tienda_key", Int64.Type}, {"producto_key", Int64.Type}, {"cliente_key", Int64.Type}, {"promocion_key", Int64.Type}, {"cantidad", Int64.Type}, {"precio_unitario", type number}, {"descuento_pct", type number}, {"costo_unitario", type number}, {"importe_bruto", type number}, {"importe_descuento", type number}, {"importe_neto", type number}, {"costo_total", type number}, {"margen", type number}, {"es_devolucion", Int64.Type}, {"tiene_promocion", Int64.Type}, {"costo_imputado", Int64.Type}, {"medio_pago", type text}, {"tipo_movimiento", type text}})
+				in
+				    #"Tipo cambiado"
+
+	annotation PBI_ResultType = Table
+
+	annotation PBI_NavigationStepName = Navegación
+

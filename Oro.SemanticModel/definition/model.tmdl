@@ -1,0 +1,28 @@
+model Oro
+	culture: es-EC
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: es-EC
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation PBI_QueryOrder = ["dim_cliente","dim_fecha","dim_producto","dim_promocion","dim_tienda","fact_ventas"]
+
+annotation __PBI_TimeIntelligenceEnabled = 1
+
+annotation PBI_ProTooling = ["DevMode"]
+
+ref table dim_cliente
+ref table DateTableTemplate_783f5f7c-33b4-47ea-8004-cceb1050845d
+ref table LocalDateTable_508bfe84-7020-43fc-b206-aa97b4485a98
+ref table dim_fecha
+ref table LocalDateTable_c3c75b73-89be-468f-9d30-5a27149222ab
+ref table LocalDateTable_5d277ea4-656e-40e5-b603-ced214ada08d
+ref table dim_producto
+ref table dim_promocion
+ref table LocalDateTable_27b41555-4852-4205-8a25-3e2f8bb039f8
+ref table LocalDateTable_68c68567-7e15-4dc8-bcb2-306d5ad09bf9
+ref table dim_tienda
+ref table LocalDateTable_da599da8-ebe5-4a99-8081-736b890b383f
+ref table fact_ventas
+

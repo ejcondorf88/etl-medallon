@@ -1,0 +1,100 @@
+{
+  "version": "1.1.0",
+  "diagrams": [
+    {
+      "ordinal": 0,
+      "scrollPosition": {
+        "x": 0,
+        "y": 193.10014899999996
+      },
+      "nodes": [
+        {
+          "location": {
+            "x": 432.32909839979664,
+            "y": 656.65368084905776
+          },
+          "nodeIndex": "dim_cliente",
+          "nodeLineageTag": "46c59951-3d86-4895-ba73-da4de0f8f75d",
+          "size": {
+            "height": 248,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 543.6862043457968,
+            "y": -50
+          },
+          "nodeIndex": "dim_fecha",
+          "nodeLineageTag": "5e8a1399-8473-4bbc-8887-ae2f0b317c0c",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 50,
+            "y": 372.81127985471744
+          },
+          "nodeIndex": "dim_producto",
+          "nodeLineageTag": "f48ebce7-45af-4f09-893c-7e01cbfa8728",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 95.35724158396556,
+            "y": 47.179324587612427
+          },
+          "nodeIndex": "dim_promocion",
+          "nodeLineageTag": "9dff20ea-db03-463e-a2df-fa5805ce70c4",
+          "size": {
+            "height": 272,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 719.367323370934,
+            "y": 335.15827084827794
+          },
+          "nodeIndex": "dim_tienda",
+          "nodeLineageTag": "50bcfc2c-8a05-4cfe-ac3a-381ffd1ab45a",
+          "size": {
+            "height": 272,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 382.37744136676935,
+            "y": 303.72912443633709
+          },
+          "nodeIndex": "fact_ventas",
+          "nodeLineageTag": "f57e3a36-1b57-4dca-8b81-56a77c38a93e",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        }
+      ],
+      "name": "Todas las tablas",
+      "zoomValue": 56.447393005377755,
+      "pinKeyFieldsToTop": false,
+      "showExtraHeaderInfo": false,
+      "hideKeyFieldsWhenCollapsed": false,
+      "tablesLocked": false
+    }
+  ],
+  "selectedDiagram": "Todas las tablas",
+  "defaultDiagram": "Todas las tablas"
+}

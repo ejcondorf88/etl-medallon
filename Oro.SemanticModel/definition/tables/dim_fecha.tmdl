@@ -1,0 +1,136 @@
+table dim_fecha
+	lineageTag: 5e8a1399-8473-4bbc-8887-ae2f0b317c0c
+
+	column fecha_key
+		dataType: int64
+		formatString: 0
+		lineageTag: cb63e8ce-bfb8-45de-83f6-fd7c78481194
+		summarizeBy: none
+		sourceColumn: fecha_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column fecha
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 719d364b-b389-4f99-9892-492b06a8ffc8
+		summarizeBy: none
+		sourceColumn: fecha
+
+		variation Variation
+			isDefault
+			relationship: 52000be0-ae6e-4195-b800-4ab5c7df0e37
+			defaultHierarchy: LocalDateTable_c3c75b73-89be-468f-9d30-5a27149222ab.'Jerarquía de fechas'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column anio
+		dataType: int64
+		formatString: 0
+		lineageTag: 93c923ef-3531-4b34-97c7-8500f41e8084
+		summarizeBy: sum
+		sourceColumn: anio
+
+		annotation SummarizationSetBy = Automatic
+
+	column trimestre
+		dataType: string
+		lineageTag: a05d393d-e64d-455a-83db-cac9dd705ad5
+		summarizeBy: none
+		sourceColumn: trimestre
+
+		annotation SummarizationSetBy = Automatic
+
+	column mes_num
+		dataType: int64
+		formatString: 0
+		lineageTag: d6ba3072-e0e7-49c3-982c-453dfb0f4008
+		summarizeBy: sum
+		sourceColumn: mes_num
+
+		annotation SummarizationSetBy = Automatic
+
+	column mes
+		dataType: string
+		lineageTag: 8fb9ecee-61f2-4255-a415-e35103ff63f6
+		summarizeBy: none
+		sourceColumn: mes
+
+		annotation SummarizationSetBy = Automatic
+
+	column mes_nombre
+		dataType: string
+		lineageTag: 3c582e04-10cb-4096-b8d9-2a3ef5cc32f5
+		summarizeBy: none
+		sourceColumn: mes_nombre
+
+		annotation SummarizationSetBy = Automatic
+
+	column anio_mes
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 15c7ba7d-b0f7-47ad-8e30-84bf63a3f258
+		summarizeBy: none
+		sourceColumn: anio_mes
+
+		variation Variation
+			isDefault
+			relationship: 7638497e-6067-4b68-aa42-cfb7f0e9ff62
+			defaultHierarchy: LocalDateTable_5d277ea4-656e-40e5-b603-ced214ada08d.'Jerarquía de fechas'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column dia
+		dataType: int64
+		formatString: 0
+		lineageTag: 2e006b39-9f44-4978-b807-340237d2c41f
+		summarizeBy: sum
+		sourceColumn: dia
+
+		annotation SummarizationSetBy = Automatic
+
+	column dia_semana_num
+		dataType: int64
+		formatString: 0
+		lineageTag: e64f7bf1-72c4-4dea-8979-eba0f2420c3e
+		summarizeBy: sum
+		sourceColumn: dia_semana_num
+
+		annotation SummarizationSetBy = Automatic
+
+	column dia_semana
+		dataType: string
+		lineageTag: dc49579a-ed5a-457b-8064-3c93e4f1305e
+		summarizeBy: none
+		sourceColumn: dia_semana
+
+		annotation SummarizationSetBy = Automatic
+
+	column es_fin_de_semana
+		dataType: int64
+		formatString: 0
+		lineageTag: 7cbb8b00-ca72-4055-b846-82ec4e348b31
+		summarizeBy: sum
+		sourceColumn: es_fin_de_semana
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_fecha = m
+		mode: import
+		source =
+				let
+				    Origen = Excel.Workbook(Web.Contents("https://uceedu.sharepoint.com/sites/POC/Documentos%20compartidos/General/modelo_estrella.xlsx"), null, true),
+				    dim_fecha_Sheet = Origen{[Item="dim_fecha",Kind="Sheet"]}[Data],
+				    #"Encabezados promovidos" = Table.PromoteHeaders(dim_fecha_Sheet, [PromoteAllScalars=true]),
+				    #"Tipo cambiado" = Table.TransformColumnTypes(#"Encabezados promovidos",{{"fecha_key", Int64.Type}, {"fecha", type date}, {"anio", Int64.Type}, {"trimestre", type text}, {"mes_num", Int64.Type}, {"mes", type text}, {"mes_nombre", type text}, {"anio_mes", type date}, {"dia", Int64.Type}, {"dia_semana_num", Int64.Type}, {"dia_semana", type text}, {"es_fin_de_semana", Int64.Type}})
+				in
+				    #"Tipo cambiado"
+
+	annotation PBI_ResultType = Table
+
+	annotation PBI_NavigationStepName = Navegación
+

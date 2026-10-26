@@ -1,0 +1,50 @@
+relationship 7567a597-8151-48e1-88d8-1c0c6a1e5d6a
+	joinOnDateBehavior: datePartOnly
+	fromColumn: dim_cliente.fecha_alta
+	toColumn: LocalDateTable_508bfe84-7020-43fc-b206-aa97b4485a98.Date
+
+relationship 52000be0-ae6e-4195-b800-4ab5c7df0e37
+	joinOnDateBehavior: datePartOnly
+	fromColumn: dim_fecha.fecha
+	toColumn: LocalDateTable_c3c75b73-89be-468f-9d30-5a27149222ab.Date
+
+relationship 7638497e-6067-4b68-aa42-cfb7f0e9ff62
+	joinOnDateBehavior: datePartOnly
+	fromColumn: dim_fecha.anio_mes
+	toColumn: LocalDateTable_5d277ea4-656e-40e5-b603-ced214ada08d.Date
+
+relationship 37f3ae87-e370-4f9c-bbd7-93ee95dacc67
+	joinOnDateBehavior: datePartOnly
+	fromColumn: dim_promocion.fecha_inicio
+	toColumn: LocalDateTable_27b41555-4852-4205-8a25-3e2f8bb039f8.Date
+
+relationship 81e0281d-4d2c-4c2a-9e6e-d171ed0fb76c
+	joinOnDateBehavior: datePartOnly
+	fromColumn: dim_promocion.fecha_fin
+	toColumn: LocalDateTable_68c68567-7e15-4dc8-bcb2-306d5ad09bf9.Date
+
+relationship a05688b8-e53f-4beb-b170-e85636dfff5a
+	joinOnDateBehavior: datePartOnly
+	fromColumn: dim_tienda.fecha_apertura
+	toColumn: LocalDateTable_da599da8-ebe5-4a99-8081-736b890b383f.Date
+
+relationship AutoDetected_cabba0df-a415-44af-a9fe-cddd5dbbc371
+	fromColumn: fact_ventas.cliente_key
+	toColumn: dim_cliente.cliente_key
+
+relationship AutoDetected_b43195af-7aa5-4ff7-b235-6a3488adda5a
+	fromColumn: fact_ventas.fecha_key
+	toColumn: dim_fecha.fecha_key
+
+relationship AutoDetected_8c35dbea-4835-4a26-a2ee-21503070545c
+	fromColumn: fact_ventas.producto_key
+	toColumn: dim_producto.producto_key
+
+relationship AutoDetected_68d447ed-a734-4922-953d-c06512dfaeb7
+	fromColumn: fact_ventas.promocion_key
+	toColumn: dim_promocion.promocion_key
+
+relationship AutoDetected_53758459-8175-4f24-b8b8-56e575007d2f
+	fromColumn: fact_ventas.tienda_key
+	toColumn: dim_tienda.tienda_key
+
